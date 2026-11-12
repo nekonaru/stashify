@@ -1,8 +1,8 @@
-import base64
-import json
 
 import pytest
 
+from stashify.errors import StashifyError
+from stashify.models import Track
 from stashify.sync import (
     load_state,
     plan_sync,
@@ -11,7 +11,6 @@ from stashify.sync import (
     state_entry,
     track_key,
 )
-from stashify.models import Track
 
 
 def make_track(title="Song", artist="Artist", url="https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"):
@@ -37,7 +36,7 @@ def test_state_round_trip(tmp_path):
 def test_load_state_rejects_garbage(tmp_path):
     state_path = tmp_path / "stashify.sync.json"
     state_path.write_text("not json", encoding="utf-8")
-    with pytest.raises(Exception):
+    with pytest.raises(StashifyError):
         load_state(state_path)
 
 

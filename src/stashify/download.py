@@ -40,7 +40,8 @@ def download_audio(
     audio_format = audio_format.lower()
     if audio_format not in AUDIO_FORMATS:
         raise DownloadError(
-            f"Unsupported audio format {audio_format!r}. Choose from: {', '.join(sorted(AUDIO_FORMATS))}."
+            f"Unsupported audio format {audio_format!r}. "
+            f"Choose from: {', '.join(sorted(AUDIO_FORMATS))}."
         )
     if not ffmpeg_available():
         raise DownloadError(
@@ -61,7 +62,10 @@ def download_audio(
             {
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": _CODEC_MAP[audio_format],
-                "preferredquality": "0" if audio_format in LOSSLESS_FORMATS else bitrate.rstrip("k"),
+                "preferredquality": (
+                    "0" if audio_format in LOSSLESS_FORMATS
+                    else bitrate.rstrip("k")
+                ),
             }
         ],
     }

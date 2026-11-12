@@ -52,7 +52,7 @@ class Track:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Track":
+    def from_dict(cls, data: dict) -> Track:
         if not isinstance(data, dict):
             raise ValueError("Track data must be a mapping")
         known = {f for f in cls.__dataclass_fields__}  # type: ignore[attr-defined]

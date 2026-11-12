@@ -19,7 +19,10 @@ SEARCH_COUNT = 8
 MIN_ACCEPT_SCORE = 30
 
 _WORD_RE = re.compile(r"[a-z0-9]{3,}")
-_PENALTY_TERMS = ("karaoke", "cover", "reaction", "remix", "live", "instrumental", "sped up", "slowed")
+_PENALTY_TERMS = (
+    "karaoke", "cover", "reaction", "remix",
+    "live", "instrumental", "sped up", "slowed",
+)
 
 
 @dataclass

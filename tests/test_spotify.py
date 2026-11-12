@@ -7,16 +7,18 @@ from stashify.spotify import (
     parse_spotify_url,
 )
 
+TRACK_ID = "4uLU6hMCjMI75M1A2tKUQC"
+
 
 @pytest.mark.parametrize(
     "text,kind,track_id",
     [
-        ("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC", "track", "4uLU6hMCjMI75M1A2tKUQC"),
-        ("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=abc123&utm_source=copy", "track", "4uLU6hMCjMI75M1A2tKUQC"),
+        (f"https://open.spotify.com/track/{TRACK_ID}", "track", TRACK_ID),
+        (f"https://open.spotify.com/track/{TRACK_ID}?si=abc123", "track", TRACK_ID),
         ("open.spotify.com/album/6akBpx67T2PzY6OKfiHvMd", "album", "6akBpx67T2PzY6OKfiHvMd"),
         ("spotify:playlist:37i9dQZF1DXcBWIGoYBM5M", "playlist", "37i9dQZF1DXcBWIGoYBM5M"),
         ("spotify:artist:0LyfQWJT6XpnA4y2r7E5Aa", "artist", "0LyfQWJT6XpnA4y2r7E5Aa"),
-        ("track:4uLU6hMCjMI75M1A2tKUQC", "track", "4uLU6hMCjMI75M1A2tKUQC"),
+        (f"track:{TRACK_ID}", "track", TRACK_ID),
     ],
 )
 def test_parse_spotify_url(text, kind, track_id):

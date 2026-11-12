@@ -35,8 +35,9 @@ def make_track():
 
 def render_audio(tmp_path: Path, name: str, codec_args: list[str]) -> Path:
     target = tmp_path / name
+    sine = "sine=frequency=440:duration=0.3"
     subprocess.run(
-        [FFMPEG, "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=0.3", *codec_args, str(target)],
+        [FFMPEG, "-y", "-f", "lavfi", "-i", sine, *codec_args, str(target)],
         check=True,
         capture_output=True,
     )
@@ -122,9 +123,11 @@ def test_tag_opus_round_trip(tmp_path):
 
 
 def test_tag_unsupported_container_reports_error(tmp_path):
+    from stashify.errors import StashifyError
+
     target = tmp_path / "track.bin"
     target.write_bytes(b"not audio")
-    with pytest.raises(Exception):
+    with pytest.raises(StashifyError):
         tag_file(target, make_track(), None, None)
 
 

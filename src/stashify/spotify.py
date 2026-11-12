@@ -228,10 +228,18 @@ class SpotifyClient:
             tracks.append(track)
         return tracks
 
+    # Fields requested from the playlist endpoint, kept on one logical line.
+    _PLAYLIST_FIELDS = (
+        "items(track(name,artists,"
+        "album(name,artists,images,total_tracks,release_date),"
+        "track_number,disc_number,duration_ms,isrc,external_ids,"
+        "external_urls,explicit,is_local)),next"
+    )
+
     def _playlist_tracks(self, playlist_id: str) -> list[Track]:
         items = self._get_paged(
             f"/playlists/{playlist_id}/tracks",
-            {"market": self.market, "fields": "items(track(name,artists,album(name,artists,images,total_tracks,release_date),track_number,disc_number,duration_ms,isrc,external_ids,external_urls,explicit,is_local)),next"},
+            {"market": self.market, "fields": self._PLAYLIST_FIELDS},
         )
         tracks: list[Track] = []
         for item in items:

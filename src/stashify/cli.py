@@ -12,13 +12,13 @@ from . import __version__
 from .config import DEFAULT_BITRATE, DEFAULT_FORMAT, DEFAULT_TEMPLATE, load_config
 from .download import AUDIO_FORMATS
 from .errors import StashifyError
+from .lyrics import fetch_lyrics
 from .models import Track
 from .pipeline import TrackOptions, process_tracks, summarize
 from .sources import find_source
+from .spotify import SpotifyClient, client_credentials_from_env
 from .sync import load_state, plan_sync, remove_entries, save_state, state_entry
 from .tagger import fetch_cover, tag_file
-from .lyrics import fetch_lyrics
-from .spotify import SpotifyClient, client_credentials_from_env
 
 LOG = logging.getLogger("stashify")
 
@@ -32,39 +32,96 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--verbose", action="store_true", help="enable debug output")
 
     credentials = argparse.ArgumentParser(add_help=False)
-    credentials.add_argument("--client-id", default=None, help="Spotify app client id (env: SPOTIFY_CLIENT_ID)")
-    credentials.add_argument("--client-secret", default=None, help="Spotify app client secret (env: SPOTIFY_CLIENT_SECRET)")
-    credentials.add_argument("--market", default=None, help="two-letter market code (default: US)")
+    credentials.add_argument(
+        "--client-id", default=None,
+        help="Spotify app client id (env: SPOTIFY_CLIENT_ID)",
+    )
+    credentials.add_argument(
+        "--client-secret", default=None,
+        help="Spotify app client secret (env: SPOTIFY_CLIENT_SECRET)",
+    )
+    credentials.add_argument(
+        "--market", default=None,
+        help="two-letter market code (default: US)",
+    )
 
     output = argparse.ArgumentParser(add_help=False)
-    output.add_argument("-o", "--output", default=None, help="output directory (default: .)")
-    output.add_argument("-t", "--template", default=None, help=f"path template (default: {DEFAULT_TEMPLATE!r})")
-    output.add_argument("-f", "--format", dest="audio_format", choices=sorted(AUDIO_FORMATS), default=None, help=f"audio format (default: {DEFAULT_FORMAT})")
-    output.add_argument("--bitrate", default=None, help=f"bitrate for lossy formats (default: {DEFAULT_BITRATE})")
-    output.add_argument("--overwrite", action="store_true", default=None, help="re-download files that already exist")
-    output.add_argument("--no-cover", action="store_true", default=None, help="do not embed cover art")
-    output.add_argument("--no-lyrics", action="store_true", default=None, help="do not embed lyrics")
-    output.add_argument("--dry-run", action="store_true", default=None, help="print matches without downloading")
+    output.add_argument(
+        "-o", "--output", default=None, help="output directory (default: .)"
+    )
+    output.add_argument(
+        "-t", "--template", default=None,
+        help=f"path template (default: {DEFAULT_TEMPLATE!r})",
+    )
+    output.add_argument(
+        "-f", "--format", dest="audio_format", choices=sorted(AUDIO_FORMATS),
+        default=None, help=f"audio format (default: {DEFAULT_FORMAT})",
+    )
+    output.add_argument(
+        "--bitrate", default=None,
+        help=f"bitrate for lossy formats (default: {DEFAULT_BITRATE})",
+    )
+    output.add_argument(
+        "--overwrite", action="store_true", default=None,
+        help="re-download files that already exist",
+    )
+    output.add_argument(
+        "--no-cover", action="store_true", default=None,
+        help="do not embed cover art",
+    )
+    output.add_argument(
+        "--no-lyrics", action="store_true", default=None,
+        help="do not embed lyrics",
+    )
+    output.add_argument(
+        "--dry-run", action="store_true", default=None,
+        help="print matches without downloading",
+    )
 
     sub = parser.add_subparsers(dest="command", metavar="command", required=True)
 
-    p_download = sub.add_parser("download", parents=[credentials, output], help="download tracks, albums or playlists")
-    p_download.add_argument("urls", nargs="+", help="Spotify track, album, playlist or artist links")
+    p_download = sub.add_parser(
+        "download", parents=[credentials, output],
+        help="download tracks, albums or playlists",
+    )
+    p_download.add_argument(
+        "urls", nargs="+", help="Spotify track, album, playlist or artist links"
+    )
 
-    p_save = sub.add_parser("save", parents=[credentials, output], help="save track metadata as JSON without downloading")
+    p_save = sub.add_parser(
+        "save", parents=[credentials, output],
+        help="save track metadata as JSON without downloading",
+    )
     p_save.add_argument("urls", nargs="+", help="Spotify links")
-    p_save.add_argument("--save-file", default=None, help="where to write the JSON (default: stdout)")
+    p_save.add_argument(
+        "--save-file", default=None,
+        help="where to write the JSON (default: stdout)",
+    )
 
-    p_url = sub.add_parser("url", parents=[credentials], help="print the matched YouTube source URL per track")
+    p_url = sub.add_parser(
+        "url", parents=[credentials],
+        help="print the matched YouTube source URL per track",
+    )
     p_url.add_argument("urls", nargs="+", help="Spotify links")
 
-    p_meta = sub.add_parser("meta", parents=[credentials, output], help="write metadata into existing audio files")
-    p_meta.add_argument("files", nargs="+", help="audio files, in the same order as the tracks")
-    p_meta.add_argument("--url", required=True, help="Spotify link whose tracks are applied")
+    p_meta = sub.add_parser(
+        "meta", parents=[credentials, output],
+        help="write metadata into existing audio files",
+    )
+    p_meta.add_argument("files", nargs="+", help="audio files, in track order")
+    p_meta.add_argument(
+        "--url", required=True, help="Spotify link whose tracks are applied"
+    )
 
-    p_sync = sub.add_parser("sync", parents=[credentials, output], help="sync a directory with a playlist")
+    p_sync = sub.add_parser(
+        "sync", parents=[credentials, output],
+        help="sync a directory with a playlist",
+    )
     p_sync.add_argument("url", help="playlist, album or artist link")
-    p_sync.add_argument("--state", default=None, help="state file (default: <output>/stashify.sync.json)")
+    p_sync.add_argument(
+        "--state", default=None,
+        help="state file (default: <output>/stashify.sync.json)",
+    )
 
     return parser
 
@@ -159,9 +216,12 @@ def _cmd_meta(args: argparse.Namespace) -> int:
         return 1
     limit = min(len(files), len(tracks))
     if len(files) != len(tracks):
-        print(f"Warning: {len(files)} file(s) given but {len(tracks)} track(s) found; tagging the first {limit}.")
+        print(
+            f"Warning: {len(files)} file(s) given but {len(tracks)} track(s) "
+            f"found; tagging the first {limit}."
+        )
     failures = 0
-    for path, track in zip(files, tracks):
+    for path, track in zip(files, tracks, strict=False):
         try:
             cover = fetch_cover(track) if not load_config().get("no_cover") else None
             lyrics = fetch_lyrics(track) if not load_config().get("no_lyrics") else None
@@ -190,10 +250,13 @@ def _cmd_sync(args: argparse.Namespace) -> int:
         results = process_tracks(missing, options)
         for result in results:
             if result.status == "downloaded" and result.path:
+                key = state_entry(result.track, result.path, out_dir)["key"]
                 state["entries"] = [
-                    e for e in state["entries"] if e.get("key") != state_entry(result.track, result.path, out_dir)["key"]
+                    e for e in state["entries"] if e.get("key") != key
                 ]
-                state["entries"].append(state_entry(result.track, result.path, out_dir))
+                state["entries"].append(
+                    state_entry(result.track, result.path, out_dir)
+                )
     else:
         print("Directory is already in sync.")
 

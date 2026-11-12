@@ -19,7 +19,10 @@ def test_safe_segment_strips_illegal_characters():
 def test_render_template_basic():
     track = make_track()
     assert render_template("{artist} - {title}", track) == "Artist - Song"
-    assert render_template("{album}/{track_number} {title}", make_track(track_number=3)) == "Album/3 Song"
+    assert (
+        render_template("{album}/{track_number} {title}", make_track(track_number=3))
+        == "Album/3 Song"
+    )
 
 
 def test_render_template_empty_falls_back():

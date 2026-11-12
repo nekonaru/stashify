@@ -104,7 +104,7 @@ def _id3_frames(track: Track, lyrics: str | None) -> dict:
 
 
 def _tag_id3(path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: str | None) -> None:
-    from mutagen.id3 import APIC, ID3, TIT2, TPE1, TPE2, TALB, TRCK, TPOS, TDRC, TSRC, USLT
+    from mutagen.id3 import APIC, TALB, TDRC, TIT2, TPE1, TPE2, TPOS, TRCK, TSRC, USLT
 
     audio = MP3_or_WAVE(path)
     try:
@@ -114,26 +114,20 @@ def _tag_id3(path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: 
 
     tags = audio.tags
     frames = _id3_frames(track, lyrics)
+    frame_classes = {
+        "TIT2": TIT2, "TPE1": TPE1, "TPE2": TPE2, "TALB": TALB,
+        "TRCK": TRCK, "TPOS": TPOS, "TDRC": TDRC, "TSRC": TSRC,
+    }
     for key, value in frames.items():
-        if key == "TIT2":
-            tags.delall("TIT2"); tags.add(TIT2(encoding=3, text=value))
-        elif key == "TPE1":
-            tags.delall("TPE1"); tags.add(TPE1(encoding=3, text=value))
-        elif key == "TPE2":
-            tags.delall("TPE2"); tags.add(TPE2(encoding=3, text=value))
-        elif key == "TALB":
-            tags.delall("TALB"); tags.add(TALB(encoding=3, text=value))
-        elif key == "TRCK":
-            tags.delall("TRCK"); tags.add(TRCK(encoding=3, text=value))
-        elif key == "TPOS":
-            tags.delall("TPOS"); tags.add(TPOS(encoding=3, text=value))
-        elif key == "TDRC":
-            tags.delall("TDRC"); tags.add(TDRC(encoding=3, text=value))
-        elif key == "TSRC":
-            tags.delall("TSRC"); tags.add(TSRC(encoding=3, text=value))
-        elif key == "USLT":
+        if key == "USLT":
             tags.delall("USLT")
             tags.add(USLT(encoding=3, lang="eng", desc="", text=value))
+            continue
+        frame_class = frame_classes.get(key)
+        if frame_class is None:
+            continue
+        tags.delall(key)
+        tags.add(frame_class(encoding=3, text=value))
 
     if cover is not None:
         data, mime = cover
@@ -209,7 +203,9 @@ def _make_picture(cover: tuple[bytes, str]) -> Picture:
     return picture
 
 
-def _tag_flac(path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: str | None) -> None:
+def _tag_flac(
+    path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: str | None
+) -> None:
     audio = FLAC(str(path))
     _vorbis_common(audio, track, lyrics)
     if cover is not None:
@@ -220,7 +216,9 @@ def _tag_flac(path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics:
 
 # OGG / Opus ----------------------------------------------------------------
 
-def _tag_opus(path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: str | None) -> None:
+def _tag_opus(
+    path: Path, track: Track, cover: tuple[bytes, str] | None, lyrics: str | None
+) -> None:
     audio = OggOpus(str(path))
     _vorbis_common(audio, track, lyrics)
     if cover is not None:
