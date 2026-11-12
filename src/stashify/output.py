@@ -58,25 +58,3 @@ def render_template(template: str, track: Track) -> str:
     if not parts:
         parts = [safe_segment(f"{track.artist} - {track.title}")]
     return "/".join(parts)
-
-
-def resolve_output_path(
-    out_dir: Path,
-    template: str,
-    track: Track,
-    extension: str,
-    overwrite: bool = False,
-) -> Path:
-    out_dir = Path(out_dir)
-    relative = render_template(template, track)
-    extension = extension.lstrip(".")
-    candidate = out_dir.joinpath(*relative.split("/")).with_suffix("." + extension)
-    if overwrite or not candidate.exists():
-        return candidate
-    stem_parent = candidate.parent
-    stem = candidate.stem
-    for index in range(2, 100):
-        candidate = stem_parent / f"{stem} ({index}).{extension}"
-        if not candidate.exists():
-            return candidate
-    raise ValueError(f"Could not find a free filename for {stem} in {stem_parent}")

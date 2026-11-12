@@ -1,5 +1,5 @@
 from stashify.models import Track
-from stashify.output import release_year, render_template, resolve_output_path, safe_segment
+from stashify.output import release_year, render_template, safe_segment
 from stashify.sources import score_candidate
 
 
@@ -36,17 +36,6 @@ def test_release_year():
     assert release_year(make_track(release_date="2021-03-02")) == "2021"
     assert release_year(make_track(release_date="")) == ""
     assert release_year(make_track(release_date="abcd")) == ""
-
-
-def test_resolve_output_path_collision(tmp_path):
-    track = make_track()
-    first = resolve_output_path(tmp_path, "{title}", track, "mp3")
-    assert first.name == "Song.mp3"
-    first.write_bytes(b"x")
-    second = resolve_output_path(tmp_path, "{title}", track, "mp3")
-    assert second.name == "Song (2).mp3"
-    overwrite = resolve_output_path(tmp_path, "{title}", track, "mp3", overwrite=True)
-    assert overwrite.name == "Song.mp3"
 
 
 def test_score_candidate_rewards_close_duration():
