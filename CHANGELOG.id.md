@@ -12,8 +12,9 @@ Stashify sekarang punya health check bawaan, dry run lebih cepat, dan lirik yang
 
 ### Peningkatan
 
-- **Lirik dari lrclib.net.** Matching lebih akurat dengan artist, title, album dan durasi, dengan lyrics.ovh sebagai fallback.
+- **Lirik dari lrclib.net.** Matching lebih akurat dengan artist, title, album dan durasi, dengan lyrics.ovh sebagai fallback. Track instrumental tidak diberi lirik nyasar.
 - **Lewati detail lookup saat tidak dibutuhkan.** `--dry-run` dan `url` tidak lagi mengambil detail per track, menghemat jaringan untuk playlist besar.
+- **Flag cover dan lirik simetris.** `--cover`, `--no-cover`, `--lyrics` dan `--no-lyrics` bekerja sebagai pasangan, sehingga CLI bisa menimpa config di kedua arah.
 
 ### Perbaikan bug
 

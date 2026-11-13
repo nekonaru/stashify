@@ -8,6 +8,7 @@ which part of the stack is broken, without running a full download.
 
 from __future__ import annotations
 
+import os
 import shutil
 
 import requests
@@ -21,36 +22,49 @@ from .sources import find_source
 
 
 def check_python() -> tuple[str, bool, str]:
-    import sys
+    try:
+        import sys
 
-    ok = sys.version_info >= (3, 10)
-    label = "Python 3.10 or newer"
-    return (label, ok, f"Python {sys.version_info.major}.{sys.version_info.minor}")
+        ok = sys.version_info >= (3, 10)
+        label = "Python 3.10 or newer"
+        return (label, ok, f"Python {sys.version_info.major}.{sys.version_info.minor}")
+    except Exception as exc:
+        return ("Python 3.10 or newer", False, f"failed: {exc}")
 
 
 def check_ffmpeg() -> tuple[str, bool, str]:
-    ffmpeg = shutil.which("ffmpeg")
-    path = "FFmpeg on PATH"
-    return (path, bool(ffmpeg), ffmpeg or "not found (https://ffmpeg.org/download.html)")
+    try:
+        ffmpeg = shutil.which("ffmpeg")
+        path = "FFmpeg on PATH"
+        return (path, bool(ffmpeg), ffmpeg or "not found (https://ffmpeg.org/download.html)")
+    except Exception as exc:
+        return ("FFmpeg on PATH", False, f"failed: {exc}")
 
 
 def check_ffprobe() -> tuple[str, bool, str]:
-    ffprobe = shutil.which("ffprobe")
-    path = "ffprobe on PATH"
-    return (path, bool(ffprobe), ffprobe or "not found (comes with FFmpeg)")
+    try:
+        ffprobe = shutil.which("ffprobe")
+        path = "ffprobe on PATH"
+        return (path, bool(ffprobe), ffprobe or "not found (comes with FFmpeg)")
+    except Exception as exc:
+        return ("ffprobe on PATH", False, f"failed: {exc}")
 
 
 def check_download_dir() -> tuple[str, bool, str]:
-    folder = default_download_dir()
-    detail = str(folder)
     try:
-        folder.mkdir(parents=True, exist_ok=True)
-        probe = folder / ".stashify-doctor-write-test"
-        probe.write_text("ok", encoding="utf-8")
-        probe.unlink()
-    except OSError as exc:
-        return ("Downloads folder writable", False, f"{folder}: {exc}")
-    return ("Downloads folder writable", True, detail)
+        folder = default_download_dir()
+    except Exception as exc:
+        return ("Downloads folder found", False, f"failed: {exc}")
+    if not folder.exists():
+        return ("Downloads folder exists", False, f"{folder} does not exist")
+    if not folder.is_dir():
+        return ("Downloads folder exists", False, f"{folder} exists but is not a directory")
+    w_ok = os.access(folder, os.W_OK)
+    return (
+        "Downloads folder writable",
+        w_ok,
+        str(folder) if w_ok else f"{folder}: not writable",
+    )
 
 
 def check_spotify_embed() -> tuple[str, bool, str]:
@@ -59,11 +73,12 @@ def check_spotify_embed() -> tuple[str, bool, str]:
         tracks = resolver.fetch_tracks(
             "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"
         )
+        if not tracks:
+            return ("Spotify embed pages", False, "embed resolved to no tracks")
+        summary = tracks[0].display() if tracks else ""
+        return ("Spotify embed pages", True, f"resolved: {summary}")
     except Exception as exc:
         return ("Spotify embed pages", False, f"failed: {exc}")
-    if not tracks:
-        return ("Spotify embed pages", False, "embed resolved to no tracks")
-    return ("Spotify embed pages", True, f"resolved: {tracks[0].display()}")
 
 
 def check_youtube() -> tuple[str, bool, str]:
@@ -75,9 +90,9 @@ def check_youtube() -> tuple[str, bool, str]:
                 duration_ms=213000,
             )
         )
+        return ("YouTube search", True, f"matched: {source.title or source.url}")
     except Exception as exc:
         return ("YouTube search", False, f"failed: {exc}")
-    return ("YouTube search", True, f"matched: {source.title or source.url}")
 
 
 def check_lyrics_api() -> tuple[str, bool, str]:
@@ -90,9 +105,11 @@ def check_lyrics_api() -> tuple[str, bool, str]:
         )
     except requests.RequestException as exc:
         return ("Lyrics API (lrclib.net)", False, f"failed: {exc}")
-    ok = response.status_code == 200
-    detail = "reachable" if ok else f"HTTP {response.status_code}"
-    return ("Lyrics API (lrclib.net)", ok, detail)
+    # 200 = match found, 404 = reachable but requested track not in lrclib.
+    if response.status_code in (200, 404):
+        detail = "reachable" if response.status_code == 200 else "reachable (track not found)"
+        return ("Lyrics API (lrclib.net)", True, detail)
+    return ("Lyrics API (lrclib.net)", False, f"HTTP {response.status_code}")
 
 
 def run_doctor() -> int:

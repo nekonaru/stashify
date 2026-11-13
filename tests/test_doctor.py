@@ -14,6 +14,25 @@ def test_doctor_all_pass(monkeypatch, capsys):
     assert "All 7 checks passed" in out
 
 
+def test_download_dir_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "stashify.doctor.default_download_dir", lambda: tmp_path / "nope"
+    )
+    _, ok, detail = doctor.check_download_dir()
+    assert ok is False
+    assert "does not exist" in detail
+
+
+def test_lyrics_api_404_is_up(monkeypatch):
+    class Resp:
+        status_code = 404
+
+    monkeypatch.setattr(doctor.requests, "get", lambda *a, **k: Resp())
+    _, ok, detail = doctor.check_lyrics_api()
+    assert ok is True
+    assert "not found" in detail
+
+
 def test_doctor_reports_failures(monkeypatch, capsys):
     monkeypatch.setattr(doctor, "check_python", lambda: ("py", True, "ok"))
     monkeypatch.setattr(doctor, "check_ffmpeg", lambda: ("ffmpeg", False, "missing"))

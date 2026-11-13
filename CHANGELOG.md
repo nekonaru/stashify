@@ -12,8 +12,9 @@ Stashify gets a built-in health check, faster dry runs and more reliable lyrics.
 
 ### Improvements
 
-- **Lyrics from lrclib.net.** Better matching using artist, title, album and duration, with lyrics.ovh as fallback.
+- **Lyrics from lrclib.net.** Better matching using artist, title, album and duration, with lyrics.ovh as fallback. Instrumental tracks get no lyrics instead of mis-matched ones.
 - **Skip detail lookups when not needed.** `--dry-run` and `url` no longer fetch per-track details, cutting network traffic for large playlists.
+- **Symmetric cover and lyrics flags.** `--cover`, `--no-cover`, `--lyrics` and `--no-lyrics` work as a pair, so the CLI can override the config in both directions.
 
 ### Bug fixes
 

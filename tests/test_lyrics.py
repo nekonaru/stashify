@@ -63,3 +63,22 @@ def test_lrclib_error_returns_fallback_none(monkeypatch):
 
     monkeypatch.setattr(lyrics.requests, "get", fake_get)
     assert lyrics.fetch_lyrics(_track()) is None
+
+
+def test_lrclib_instrumental_does_not_fall_back(monkeypatch):
+    calls = {}
+
+    def fake_get(url, params=None, timeout=None, headers=None):
+        class Resp:
+            status_code = 200
+            content = b'{"instrumental": true}'
+
+            def json(self):
+                return {"instrumental": True}
+
+        calls["count"] = calls.get("count", 0) + 1
+        return Resp()
+
+    monkeypatch.setattr(lyrics.requests, "get", fake_get)
+    assert lyrics.fetch_lyrics(_track()) is None
+    assert calls["count"] == 1

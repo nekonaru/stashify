@@ -17,6 +17,10 @@ MAX_LYRICS_BYTES = 256 * 1024
 USER_AGENT = "stashify/1.4 (https://github.com/nekonaru/stashify)"
 
 
+class _Instrumental(Exception):
+    """lrclib confirmed the track is instrumental; use no lyrics at all."""
+
+
 def _fetch_lrclib(track: Track) -> str | None:
     params = {
         "artist_name": track.artist,
@@ -25,7 +29,7 @@ def _fetch_lrclib(track: Track) -> str | None:
     if track.album:
         params["album_name"] = track.album
     if track.duration_ms:
-        params["duration"] = int(track.duration_ms // 1000)
+        params["duration"] = round(track.duration_ms / 1000)
     try:
         response = requests.get(
             LRCLIB_URL, params=params, timeout=TIMEOUT,
@@ -38,9 +42,12 @@ def _fetch_lrclib(track: Track) -> str | None:
     if len(response.content) > MAX_LYRICS_BYTES:
         return None
     try:
-        lyrics = (response.json() or {}).get("plainLyrics") or ""
+        payload = response.json()
     except ValueError:
         return None
+    if isinstance(payload, dict) and payload.get("instrumental"):
+        raise _Instrumental()
+    lyrics = (payload or {}).get("plainLyrics") or ""
     return lyrics.strip() or None
 
 
@@ -63,4 +70,10 @@ def _fetch_ovh(track: Track) -> str | None:
 
 
 def fetch_lyrics(track: Track) -> str | None:
-    return _fetch_lrclib(track) or _fetch_ovh(track)
+    try:
+        lyrics = _fetch_lrclib(track)
+    except _Instrumental:
+        return None
+    if lyrics:
+        return lyrics
+    return _fetch_ovh(track)

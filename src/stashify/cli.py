@@ -88,12 +88,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="re-download files that already exist",
     )
     output.add_argument(
-        "--no-cover", action="store_true", default=None,
-        help="do not embed cover art",
+        "--cover", dest="cover", default=None, action=argparse.BooleanOptionalAction,
+        help="embed cover art (default: config or on)",
     )
     output.add_argument(
-        "--no-lyrics", action="store_true", default=None,
-        help="do not embed lyrics",
+        "--lyrics", dest="lyrics", default=None, action=argparse.BooleanOptionalAction,
+        help="embed lyrics (default: config or on)",
     )
     output.add_argument(
         "--dry-run", action="store_true", default=None,
@@ -186,6 +186,15 @@ def _resolver(args: argparse.Namespace):
     raise StashifyError(f"Unknown provider {provider!r}. Choose from: embed, api.")
 
 
+def _pick_flag(cli: bool | None, config_value: bool | None, default: bool) -> bool:
+    """CLI flag wins when given, else config value, else default."""
+    if cli is not None:
+        return cli
+    if config_value is not None:
+        return bool(config_value)
+    return default
+
+
 def _options(args: argparse.Namespace) -> TrackOptions:
     config = load_config()
 
@@ -194,8 +203,12 @@ def _options(args: argparse.Namespace) -> TrackOptions:
             return cli
         return config.get(key, default)
 
-    no_cover = pick(getattr(args, "no_cover", None), "no_cover", False)
-    no_lyrics = pick(getattr(args, "no_lyrics", None), "no_lyrics", False)
+    cli_cover = getattr(args, "cover", None)
+    cover = _pick_flag(cli_cover, not bool(config.get("no_cover", False)), default=True)
+
+    cli_lyrics = getattr(args, "lyrics", None)
+    lyrics = _pick_flag(cli_lyrics, not bool(config.get("no_lyrics", False)), default=True)
+
     return TrackOptions(
         out_dir=Path(
             pick(getattr(args, "output", None), "output_dir", str(default_download_dir()))
@@ -205,8 +218,8 @@ def _options(args: argparse.Namespace) -> TrackOptions:
         bitrate=pick(getattr(args, "bitrate", None), "bitrate", DEFAULT_BITRATE),
         overwrite=bool(pick(getattr(args, "overwrite", None), "overwrite", False)),
         dry_run=bool(pick(getattr(args, "dry_run", None), "dry_run", False)),
-        embed_cover=not no_cover,
-        embed_lyrics=not no_lyrics,
+        embed_cover=cover,
+        embed_lyrics=lyrics,
         jobs=clamp_jobs(pick(getattr(args, "jobs", None), "jobs", DEFAULT_JOBS)),
     )
 
@@ -278,8 +291,10 @@ def _cmd_url(args: argparse.Namespace) -> int:
 
 def _cmd_meta(args: argparse.Namespace) -> int:
     config = load_config()
-    no_cover = bool(getattr(args, "no_cover", None) or config.get("no_cover", False))
-    no_lyrics = bool(getattr(args, "no_lyrics", None) or config.get("no_lyrics", False))
+    cli_cover = getattr(args, "cover", None)
+    cover = _pick_flag(cli_cover, not bool(config.get("no_cover", False)), default=True)
+    cli_lyrics = getattr(args, "lyrics", None)
+    lyrics = _pick_flag(cli_lyrics, not bool(config.get("no_lyrics", False)), default=True)
 
     tracks = _fetch(args, [args.url])
     files = [Path(f) for f in args.files]
@@ -297,8 +312,8 @@ def _cmd_meta(args: argparse.Namespace) -> int:
     failures = 0
     for path, track in zip(files, tracks, strict=False):
         try:
-            cover = fetch_cover(track) if not no_cover else None
-            lyrics = fetch_lyrics(track) if not no_lyrics else None
+            cover = fetch_cover(track) if cover else None
+            lyrics = fetch_lyrics(track) if lyrics else None
             tag_file(path, track, cover, lyrics)
             print(f"Tagged {path} -> {track.display()}")
         except Exception as exc:
