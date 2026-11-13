@@ -61,6 +61,7 @@
 | **Audio formats** | MP3, M4A, Opus, FLAC or WAV, converted through FFmpeg |
 | **Bitrate control** | Choose the bitrate for lossy formats, default `192k` |
 | **Skip existing** | Files that already exist are skipped, `--overwrite` forces a re-download |
+| **Parallel downloads** | N tracks at a time with `--jobs` (default 2, max 8), faster on large playlists |
 | **Dry run** | `--dry-run` prints the matched source per track without downloading anything |
 
 ### Metadata
@@ -206,9 +207,10 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 
 ### Everyday use
 
-- Download a single track, an album, a playlist or an artist's top tracks by passing their links to `stashify download`
+- Download a single track, an album, a playlist or an artist's top tracks by passing their links to `stashify download`; files land in your Downloads folder by default
 - Pick the audio format with `-f mp3|m4a|opus|flac|wav` (default `mp3`)
 - Change the output folder with `-o "D:\Music"` and the naming scheme with `-t "{album}/{track_number} {title}"`
+- Download up to 8 tracks at once with `--jobs 4` (default 2)
 - Skip cover art or lyrics with `--no-cover` / `--no-lyrics`, or re-fetch everything with `--overwrite`
 - Preview the match without downloading with `--dry-run`
 - Keep a folder in sync with a playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
@@ -228,7 +230,8 @@ Config file locations: `%APPDATA%\stashify\config.json` (Windows), `~/.config/st
 
 | Key | Type | Default | Effect |
 |-----|------|---------|--------|
-| `output_dir` | string | `.` | Output directory for downloads |
+| `output_dir` | string | your Downloads folder | Output directory for downloads (Windows: `%USERPROFILE%\Downloads`, macOS and Linux: `~/Downloads` or `XDG_DOWNLOAD_DIR`) |
+| `jobs` | integer | `2` | Parallel downloads, between 1 and 8 |
 | `audio_format` | string | `mp3` | Default audio format |
 | `bitrate` | string | `192k` | Bitrate for lossy formats |
 | `template` | string | `{artist} - {title}` | Output path template |
@@ -239,7 +242,9 @@ Config file locations: `%APPDATA%\stashify\config.json` (Windows), `~/.config/st
 | `no_cover` | boolean | `false` | Never embed cover art |
 | `no_lyrics` | boolean | `false` | Never embed lyrics |
 
-Command line flags always win over the config file. Use `--provider api` with `--client-id` and `--client-secret` (or `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` environment variables) if you have an official Web API entitlement; it adds ISRC and album metadata for tracks and albums.
+Command line flags always win over the config file. The default output directory is your Downloads folder; set the `STASHIFY_DOWNLOAD_DIR` environment variable, the `-o` flag or the `output_dir` key to change it.
+
+Use `--provider api` with `--client-id` and `--client-secret` (or `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` environment variables) if you have an official Web API entitlement; it adds ISRC and album metadata for tracks and albums.
 
 ---
 

@@ -61,6 +61,7 @@
 | **Format audio** | MP3, M4A, Opus, FLAC atau WAV, dikonversi lewat FFmpeg |
 | **Bitrate control** | Bitrate bisa dipilih untuk format lossy, default `192k` |
 | **Skip existing** | File yang sudah ada dilewati, `--overwrite` memaksa unduh ulang |
+| **Download paralel** | N track sekaligus dengan `--jobs` (default 2, maksimum 8), lebih cepat untuk playlist besar |
 | **Dry run** | `--dry-run` mencetak source yang dipilih per track tanpa mengunduh apa pun |
 
 ### Metadata
@@ -206,9 +207,10 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 
 ### Pemakaian sehari-hari
 
-- Unduh satu track, album, playlist, atau top tracks seorang artist dengan memberikan linknya ke `stashify download`
+- Unduh satu track, album, playlist, atau top tracks seorang artist dengan memberikan linknya ke `stashify download`; file mendarat di folder Downloads secara default
 - Pilih format audio dengan `-f mp3|m4a|opus|flac|wav` (default `mp3`)
 - Ubah folder output dengan `-o "D:\Music"` dan pola penamaan dengan `-t "{album}/{track_number} {title}"`
+- Unduh hingga 8 track sekaligus dengan `--jobs 4` (default 2)
 - Abaikan cover art atau lirik dengan `--no-cover` / `--no-lyrics`, atau ulangi semua dengan `--overwrite`
 - Preview hasil match tanpa mengunduh dengan `--dry-run`
 - Sinkronkan folder dengan playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
@@ -228,7 +230,8 @@ Lokasi config file: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stash
 
 | Key | Tipe | Default | Efek |
 |-----|------|---------|--------|
-| `output_dir` | string | `.` | Folder output untuk unduhan |
+| `output_dir` | string | folder Downloads kamu | Folder output untuk unduhan (Windows: `%USERPROFILE%\Downloads`, macOS dan Linux: `~/Downloads` atau `XDG_DOWNLOAD_DIR`) |
+| `jobs` | integer | `2` | Unduhan paralel, antara 1 dan 8 |
 | `audio_format` | string | `mp3` | Format audio default |
 | `bitrate` | string | `192k` | Bitrate untuk format lossy |
 | `template` | string | `{artist} - {title}` | Template path output |
@@ -239,7 +242,9 @@ Lokasi config file: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stash
 | `no_cover` | boolean | `false` | Jangan pernah menyematkan cover art |
 | `no_lyrics` | boolean | `false` | Jangan pernah menyematkan lirik |
 
-Flag command line selalu lebih diutamakan daripada config file. Gunakan `--provider api` dengan `--client-id` dan `--client-secret` (atau environment variable `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`) jika kamu punya entitlement Web API resmi; cara ini menambahkan ISRC dan metadata album untuk track dan album.
+Flag command line selalu lebih diutamakan daripada config file. Folder output default adalah folder Downloads kamu; atur environment variable `STASHIFY_DOWNLOAD_DIR`, flag `-o` atau key `output_dir` untuk mengubahnya.
+
+Gunakan `--provider api` dengan `--client-id` dan `--client-secret` (atau environment variable `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`) jika kamu punya entitlement Web API resmi; cara ini menambahkan ISRC dan metadata album untuk track dan album.
 
 ---
 

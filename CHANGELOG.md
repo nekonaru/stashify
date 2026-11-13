@@ -2,6 +2,28 @@
 
 All notable changes to Stashify are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.0
+
+Downloads now land in the operating system's Downloads folder, and large playlists download in parallel.
+
+### New features
+
+- **Parallel downloads.** `--jobs N` downloads up to 8 tracks at once, default 2, results are written in input order and duplicate target names never clobber each other.
+- **Fallback search.** If YouTube returns nothing for `artist - title`, Stashify retries without the dash and with `audio` appended before giving up.
+
+### Improvements
+
+- **Downloads folder default.** Output defaults to the OS downloads folder (`%USERPROFILE%\Downloads` on Windows, `~/Downloads` or `XDG_DOWNLOAD_DIR` on macOS and Linux), override with `-o`, `output_dir` or `STASHIFY_DOWNLOAD_DIR`.
+- **Output location printed.** Every run prints `Saving to:` so the destination is always visible.
+- **Parallel metadata.** Per-track detail lookups and metadata enrichment run four at a time.
+
+### Usage
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.1.0
 
 Stashify works out of the box with any Spotify account: metadata now comes from Spotify's public pages, no developer app or Premium needed.

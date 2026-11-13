@@ -2,6 +2,28 @@
 
 Semua perubahan penting di Stashify didokumentasikan di file ini. Formatnya mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), dan project ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.0
+
+Unduhan sekarang mendarat di folder Downloads milik OS, dan playlist besar diunduh secara paralel.
+
+### Fitur baru
+
+- **Download paralel.** `--jobs N` mengunduh hingga 8 track sekaligus, default 2, hasil ditulis mengikuti urutan input dan nama target yang sama tidak pernah menimpa satu sama lain.
+- **Fallback search.** Jika YouTube tidak mengembalikan apa pun untuk `artist - title`, Stashify mencoba lagi tanpa strip dan dengan `audio` di belakang sebelum menyerah.
+
+### Peningkatan
+
+- **Default folder Downloads.** Output default ke folder Downloads OS (`%USERPROFILE%\Downloads` di Windows, `~/Downloads` atau `XDG_DOWNLOAD_DIR` di macOS dan Linux), ubah dengan `-o`, `output_dir` atau `STASHIFY_DOWNLOAD_DIR`.
+- **Lokasi output dicetak.** Setiap run mencetak `Saving to:` agar tujuan selalu terlihat.
+- **Metadata paralel.** Lookup detail per track dan enrichment metadata berjalan empat sekaligus.
+
+### Penggunaan
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.1.0
 
 Stashify langsung berfungsi dengan akun Spotify apa pun: metadata sekarang diambil dari halaman publik Spotify, tanpa developer app atau Premium.
