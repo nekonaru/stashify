@@ -41,12 +41,16 @@ def config_dir() -> Path:
     return Path(xdg) / "stashify"
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def default_download_dir() -> Path:
     """The user's downloads folder, resolved the same way other apps do it."""
     override = os.environ.get("STASHIFY_DOWNLOAD_DIR")
     if override:
         return Path(override).expanduser()
-    if os.name == "nt":
+    if _is_windows():
         profile = os.environ.get("USERPROFILE") or str(Path.home())
         return Path(profile) / "Downloads"
     xdg = os.environ.get("XDG_DOWNLOAD_DIR")

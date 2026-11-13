@@ -22,14 +22,15 @@ def test_download_dir_env_override(monkeypatch, tmp_path):
 def test_download_dir_windows(monkeypatch):
     monkeypatch.delenv("STASHIFY_DOWNLOAD_DIR", raising=False)
     monkeypatch.delenv("XDG_DOWNLOAD_DIR", raising=False)
-    monkeypatch.setattr(config.os, "name", "nt")
+    monkeypatch.setattr(config, "_is_windows", lambda: True)
     monkeypatch.setenv("USERPROFILE", "C:\\Users\\example")
-    assert default_download_dir() == Path("C:\\Users\\example") / "Downloads"
+    expected = Path("C:\\Users\\example") / "Downloads"
+    assert default_download_dir() == expected
 
 
 def test_download_dir_xdg_env(monkeypatch):
     monkeypatch.delenv("STASHIFY_DOWNLOAD_DIR", raising=False)
-    monkeypatch.setattr(config.os, "name", "posix")
+    monkeypatch.setattr(config, "_is_windows", lambda: False)
     monkeypatch.setenv("XDG_DOWNLOAD_DIR", "/data/downloads")
     assert default_download_dir() == Path("/data/downloads")
 
@@ -37,7 +38,7 @@ def test_download_dir_xdg_env(monkeypatch):
 def test_download_dir_user_dirs_file(monkeypatch, tmp_path):
     monkeypatch.delenv("STASHIFY_DOWNLOAD_DIR", raising=False)
     monkeypatch.delenv("XDG_DOWNLOAD_DIR", raising=False)
-    monkeypatch.setattr(config.os, "name", "posix")
+    monkeypatch.setattr(config, "_is_windows", lambda: False)
     fake_home = tmp_path / "home"
     config_dir = fake_home / ".config"
     config_dir.mkdir(parents=True)
@@ -52,7 +53,7 @@ def test_download_dir_user_dirs_file(monkeypatch, tmp_path):
 def test_download_dir_fallback(monkeypatch, tmp_path):
     monkeypatch.delenv("STASHIFY_DOWNLOAD_DIR", raising=False)
     monkeypatch.delenv("XDG_DOWNLOAD_DIR", raising=False)
-    monkeypatch.setattr(config.os, "name", "posix")
+    monkeypatch.setattr(config, "_is_windows", lambda: False)
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
