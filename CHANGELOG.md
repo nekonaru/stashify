@@ -22,4 +22,13 @@ Stashify resolves any Spotify link to a properly tagged audio file on your machi
 
 - **Safe file naming.** Template segments are sanitized for every supported OS and collisions are handled predictably.
 - **Security policy.** `SECURITY.md` published, with credentials read from the environment only.
-- **CI.** Ruff and the pytest suite run on Python 3.10 and 3.12 on every push and pull request.
+- **CI.** Ruff and the test suite run on Python 3.10 and 3.12 on every push and pull request.
+
+### Usage
+
+```bash
+pip install git+https://github.com/nekonaru/stashify.git
+export SPOTIFY_CLIENT_ID="your-client-id"
+export SPOTIFY_CLIENT_SECRET="your-client-secret"
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```

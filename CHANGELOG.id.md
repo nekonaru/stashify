@@ -23,3 +23,12 @@ Stashify me-resolve link Spotify apa pun menjadi audio file dengan tag metadata 
 - **Safe file naming.** Segment template disanitasi untuk semua OS dan collision ditangani secara prediktif.
 - **Security policy.** `SECURITY.md` dipublikasikan, dengan credential hanya dibaca dari environment.
 - **CI.** Ruff dan pytest suite berjalan di Python 3.10 dan 3.12 di setiap push dan pull request.
+
+### Penggunaan
+
+```bash
+pip install git+https://github.com/nekonaru/stashify.git
+export SPOTIFY_CLIENT_ID="your-client-id"
+export SPOTIFY_CLIENT_SECRET="your-client-secret"
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
