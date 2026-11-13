@@ -16,6 +16,13 @@ Stashify works out of the box with any Spotify account: metadata now comes from 
 - **Public-page diagnostics.** Private or removed links now produce a clear message instead of a silent failure.
 - **Official API updated.** February 2026 Web API changes are applied: playlists and artist top tracks are rejected with guidance on `--provider api` (tracks and albums still work there), and 403 responses now include the server's message.
 
+### Usage
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.0.0
 
 Stashify resolves any Spotify link to a properly tagged audio file on your machine, sourced from YouTube.

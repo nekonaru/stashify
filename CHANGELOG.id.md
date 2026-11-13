@@ -16,6 +16,13 @@ Stashify langsung berfungsi dengan akun Spotify apa pun: metadata sekarang diamb
 - **Public-page diagnostics.** Link privat atau yang dihapus sekarang menghasilkan pesan yang jelas, bukan kegagalan diam.
 - **Official API updated.** Perubahan Web API Februari 2026 diterapkan: playlist dan artist top tracks ditolak dengan panduan di `--provider api` (tracks dan album tetap berfungsi di sana), dan respons 403 sekarang menyertakan pesan dari server.
 
+### Penggunaan
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.0.0
 
 Stashify me-resolve link Spotify apa pun menjadi audio file dengan tag metadata lengkap di mesin kamu, diambil dari YouTube.
