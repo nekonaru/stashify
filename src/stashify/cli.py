@@ -19,6 +19,7 @@ from .config import (
     default_download_dir,
     load_config,
 )
+from .doctor import run_doctor
 from .download import AUDIO_FORMATS
 from .embed import EmbedResolver
 from .errors import StashifyError
@@ -55,7 +56,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="two-letter market code (default: US)",
     )
 
-    output = argparse.ArgumentParser(add_help=False)
+    resolver = argparse.ArgumentParser(add_help=False)
+    resolver.add_argument(
+        "--provider", choices=["embed", "api"], default=None,
+        help="metadata provider (default: embed, no account needed)",
+    )
+    resolver.add_argument(
+        "--no-details", action="store_true", default=None,
+        help="skip per-track detail lookup (faster, fewer cover art files)",
+    )
+
+    output = argparse.ArgumentParser(add_help=False, parents=[resolver])
     output.add_argument(
         "-o", "--output", default=None,
         help="output directory (default: Downloads folder)"
@@ -77,24 +88,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="re-download files that already exist",
     )
     output.add_argument(
-        "--no-cover", action="store_true", default=None,
-        help="do not embed cover art",
+        "--cover", dest="cover", default=None, action=argparse.BooleanOptionalAction,
+        help="embed cover art (default: config or on)",
     )
     output.add_argument(
-        "--no-lyrics", action="store_true", default=None,
-        help="do not embed lyrics",
+        "--lyrics", dest="lyrics", default=None, action=argparse.BooleanOptionalAction,
+        help="embed lyrics (default: config or on)",
     )
     output.add_argument(
         "--dry-run", action="store_true", default=None,
         help="print matches without downloading",
-    )
-    output.add_argument(
-        "--provider", choices=["embed", "api"], default=None,
-        help="metadata provider (default: embed, no account needed)",
-    )
-    output.add_argument(
-        "--no-details", action="store_true", default=None,
-        help="skip per-track detail lookup (faster, fewer cover art files)",
     )
     output.add_argument(
         "--jobs", type=int, default=None, metavar="N",
@@ -122,7 +125,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p_url = sub.add_parser(
-        "url", parents=[credentials],
+        "url", parents=[credentials, resolver],
         help="print the matched YouTube source URL per track",
     )
     p_url.add_argument("urls", nargs="+", help="Spotify links")
@@ -135,6 +138,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_meta.add_argument(
         "--url", required=True, help="Spotify link whose tracks are applied"
     )
+
+    sub.add_parser("doctor", help="check Python, FFmpeg, network and APIs")
 
     p_sync = sub.add_parser(
         "sync", parents=[credentials, output],
@@ -171,11 +176,23 @@ def _resolver(args: argparse.Namespace):
     provider = getattr(args, "provider", None) or config.get("provider", "embed")
     if provider == "embed":
         no_details = bool(getattr(args, "no_details", False))
-        detailed = False if no_details else bool(config.get("detailed", True))
+        dry_run = bool(getattr(args, "dry_run", False))
+        url_only = getattr(args, "command", None) == "url"
+        skip = no_details or dry_run or url_only
+        detailed = False if skip else bool(config.get("detailed", True))
         return EmbedResolver(detailed=detailed)
     if provider == "api":
         return _client(args)
     raise StashifyError(f"Unknown provider {provider!r}. Choose from: embed, api.")
+
+
+def _pick_flag(cli: bool | None, config_value: bool | None, default: bool) -> bool:
+    """CLI flag wins when given, else config value, else default."""
+    if cli is not None:
+        return cli
+    if config_value is not None:
+        return bool(config_value)
+    return default
 
 
 def _options(args: argparse.Namespace) -> TrackOptions:
@@ -186,8 +203,12 @@ def _options(args: argparse.Namespace) -> TrackOptions:
             return cli
         return config.get(key, default)
 
-    no_cover = pick(getattr(args, "no_cover", None), "no_cover", False)
-    no_lyrics = pick(getattr(args, "no_lyrics", None), "no_lyrics", False)
+    cli_cover = getattr(args, "cover", None)
+    cover = _pick_flag(cli_cover, not bool(config.get("no_cover", False)), default=True)
+
+    cli_lyrics = getattr(args, "lyrics", None)
+    lyrics = _pick_flag(cli_lyrics, not bool(config.get("no_lyrics", False)), default=True)
+
     return TrackOptions(
         out_dir=Path(
             pick(getattr(args, "output", None), "output_dir", str(default_download_dir()))
@@ -197,8 +218,8 @@ def _options(args: argparse.Namespace) -> TrackOptions:
         bitrate=pick(getattr(args, "bitrate", None), "bitrate", DEFAULT_BITRATE),
         overwrite=bool(pick(getattr(args, "overwrite", None), "overwrite", False)),
         dry_run=bool(pick(getattr(args, "dry_run", None), "dry_run", False)),
-        embed_cover=not no_cover,
-        embed_lyrics=not no_lyrics,
+        embed_cover=cover,
+        embed_lyrics=lyrics,
         jobs=clamp_jobs(pick(getattr(args, "jobs", None), "jobs", DEFAULT_JOBS)),
     )
 
@@ -270,6 +291,11 @@ def _cmd_url(args: argparse.Namespace) -> int:
 
 def _cmd_meta(args: argparse.Namespace) -> int:
     config = load_config()
+    cli_cover = getattr(args, "cover", None)
+    cover = _pick_flag(cli_cover, not bool(config.get("no_cover", False)), default=True)
+    cli_lyrics = getattr(args, "lyrics", None)
+    lyrics = _pick_flag(cli_lyrics, not bool(config.get("no_lyrics", False)), default=True)
+
     tracks = _fetch(args, [args.url])
     files = [Path(f) for f in args.files]
     missing = [f for f in files if not f.is_file()]
@@ -286,8 +312,8 @@ def _cmd_meta(args: argparse.Namespace) -> int:
     failures = 0
     for path, track in zip(files, tracks, strict=False):
         try:
-            cover = fetch_cover(track) if not config.get("no_cover") else None
-            lyrics = fetch_lyrics(track) if not config.get("no_lyrics") else None
+            cover = fetch_cover(track) if cover else None
+            lyrics = fetch_lyrics(track) if lyrics else None
             tag_file(path, track, cover, lyrics)
             print(f"Tagged {path} -> {track.display()}")
         except Exception as exc:
@@ -351,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
         "url": _cmd_url,
         "meta": _cmd_meta,
         "sync": _cmd_sync,
+        "doctor": lambda args: run_doctor(),
     }
     handler = handlers[args.command]
     try:
