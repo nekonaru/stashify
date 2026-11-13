@@ -19,6 +19,7 @@ from .config import (
     default_download_dir,
     load_config,
 )
+from .doctor import run_doctor
 from .download import AUDIO_FORMATS
 from .embed import EmbedResolver
 from .errors import StashifyError
@@ -55,7 +56,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="two-letter market code (default: US)",
     )
 
-    output = argparse.ArgumentParser(add_help=False)
+    resolver = argparse.ArgumentParser(add_help=False)
+    resolver.add_argument(
+        "--provider", choices=["embed", "api"], default=None,
+        help="metadata provider (default: embed, no account needed)",
+    )
+    resolver.add_argument(
+        "--no-details", action="store_true", default=None,
+        help="skip per-track detail lookup (faster, fewer cover art files)",
+    )
+
+    output = argparse.ArgumentParser(add_help=False, parents=[resolver])
     output.add_argument(
         "-o", "--output", default=None,
         help="output directory (default: Downloads folder)"
@@ -89,14 +100,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="print matches without downloading",
     )
     output.add_argument(
-        "--provider", choices=["embed", "api"], default=None,
-        help="metadata provider (default: embed, no account needed)",
-    )
-    output.add_argument(
-        "--no-details", action="store_true", default=None,
-        help="skip per-track detail lookup (faster, fewer cover art files)",
-    )
-    output.add_argument(
         "--jobs", type=int, default=None, metavar="N",
         help=f"download up to N tracks in parallel (default: {DEFAULT_JOBS}, max 8)",
     )
@@ -122,7 +125,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p_url = sub.add_parser(
-        "url", parents=[credentials],
+        "url", parents=[credentials, resolver],
         help="print the matched YouTube source URL per track",
     )
     p_url.add_argument("urls", nargs="+", help="Spotify links")
@@ -135,6 +138,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_meta.add_argument(
         "--url", required=True, help="Spotify link whose tracks are applied"
     )
+
+    sub.add_parser("doctor", help="check Python, FFmpeg, network and APIs")
 
     p_sync = sub.add_parser(
         "sync", parents=[credentials, output],
@@ -171,7 +176,10 @@ def _resolver(args: argparse.Namespace):
     provider = getattr(args, "provider", None) or config.get("provider", "embed")
     if provider == "embed":
         no_details = bool(getattr(args, "no_details", False))
-        detailed = False if no_details else bool(config.get("detailed", True))
+        dry_run = bool(getattr(args, "dry_run", False))
+        url_only = getattr(args, "command", None) == "url"
+        skip = no_details or dry_run or url_only
+        detailed = False if skip else bool(config.get("detailed", True))
         return EmbedResolver(detailed=detailed)
     if provider == "api":
         return _client(args)
@@ -270,6 +278,9 @@ def _cmd_url(args: argparse.Namespace) -> int:
 
 def _cmd_meta(args: argparse.Namespace) -> int:
     config = load_config()
+    no_cover = bool(getattr(args, "no_cover", None) or config.get("no_cover", False))
+    no_lyrics = bool(getattr(args, "no_lyrics", None) or config.get("no_lyrics", False))
+
     tracks = _fetch(args, [args.url])
     files = [Path(f) for f in args.files]
     missing = [f for f in files if not f.is_file()]
@@ -286,8 +297,8 @@ def _cmd_meta(args: argparse.Namespace) -> int:
     failures = 0
     for path, track in zip(files, tracks, strict=False):
         try:
-            cover = fetch_cover(track) if not config.get("no_cover") else None
-            lyrics = fetch_lyrics(track) if not config.get("no_lyrics") else None
+            cover = fetch_cover(track) if not no_cover else None
+            lyrics = fetch_lyrics(track) if not no_lyrics else None
             tag_file(path, track, cover, lyrics)
             print(f"Tagged {path} -> {track.display()}")
         except Exception as exc:
@@ -351,6 +362,7 @@ def main(argv: list[str] | None = None) -> int:
         "url": _cmd_url,
         "meta": _cmd_meta,
         "sync": _cmd_sync,
+        "doctor": lambda args: run_doctor(),
     }
     handler = handlers[args.command]
     try:
