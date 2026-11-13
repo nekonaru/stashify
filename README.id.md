@@ -224,6 +224,7 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 - Ubah folder output dengan `-o "D:\Music"` dan pola penamaan dengan `-t "{album}/{track_number} {title}"`
 - Unduh hingga 8 track sekaligus dengan `--jobs 4` (default 2)
 - Abaikan cover art atau lirik dengan `--no-cover` / `--no-lyrics`, atau ulangi semua dengan `--overwrite`
+- Periksa seluruh stack dengan `stashify doctor` saat unduhan gagal; melaporkan Python, FFmpeg, akses jaringan ke Spotify, YouTube dan lyrics API
 - Preview hasil match tanpa mengunduh dengan `--dry-run`
 - Sinkronkan folder dengan playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
 - Retag file yang sudah kamu punya: `stashify meta file1.mp3 file2.mp3 --url "ALBUM_URL"`
@@ -269,7 +270,7 @@ Stashify hanya online saat me-resolve metadata, mencari source, atau mengambil l
 | Metadata track, album, playlist dan artist | Public embed pages Spotify (default) atau Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (disematkan ke file) |
 | Audio source | YouTube, lewat yt-dlp |
-| Lirik | lyrics.ovh (tanpa key) |
+| Lirik | lrclib.net (tanpa key), lyrics.ovh sebagai fallback |
 
 > [!NOTE]
 > Beberapa track tidak punya match yang layak di YouTube. Stashify melaporkan kandidat terbaik yang ditemukan dan melewati track dengan skor terlalu rendah daripada mengunduh lagu yang salah.
@@ -285,6 +286,7 @@ stashify/
 │       ├── __init__.py           # versi package
 │       ├── __main__.py           # entry point python -m stashify
 │       ├── cli.py                # argument parsing dan command
+│       ├── doctor.py             # health check seluruh stack end-to-end
 │       ├── pipeline.py           # shared download pipeline
 │       ├── spotify.py            # Spotify Web API client (opsional, --provider api)
 │       ├── embed.py              # resolver public embed page (default provider)
@@ -292,7 +294,7 @@ stashify/
 │       ├── sources.py            # pencarian dan scoring YouTube
 │       ├── download.py           # download yt-dlp dan konversi FFmpeg
 │       ├── tagger.py             # tagging MP3, M4A, FLAC, Opus dan WAV
-│       ├── lyrics.py             # client lyrics.ovh
+│       ├── lyrics.py             # client lrclib.net (lyrics.ovh fallback)
 │       ├── output.py             # path template dan file naming
 │       ├── sync.py               # state handling playlist sync
 │       ├── config.py             # config file loading
@@ -380,6 +382,13 @@ Lint rule ditegakkan lewat section `[tool.ruff]` di `pyproject.toml`.
 ## FAQ
 
 <details>
+<summary><b>Sesuatu gagal; bagaimana cara mendiagnosisnya?</b></summary>
+
+Jalankan `stashify doctor`. Ia memeriksa Python, FFmpeg, folder Downloads, public embed pages Spotify, pencarian YouTube dan lyrics API, lalu memberi tahu persis bagian mana yang bekerja dan mana yang tidak.
+
+</details>
+
+<details>
 <summary><b>Apakah saya butuh akun, login, atau developer app Spotify?</b></summary>
 
 Tidak. Provider default membaca halaman publik Spotify, persis yang dilihat browser tanpa login. Tidak ada yang perlu dibuat, login atau dibocorkan.
@@ -445,7 +454,7 @@ Bisa. `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"` mengunduh track baru d
 
 ## Disclaimer
 
-Stashify adalah project open-source independen dan tidak berafiliasi atau diendorse oleh Spotify, Google, YouTube, maupun operator lyrics.ovh. Provider default me-parse public embed pages Spotify; ini bukan API terdokumentasi dan bisa berubah atau rusak kapan pun. Mengunduh musik bisa melanggar terms of service platform tersebut dan bisa melanggar copyright di yurisdiksi kamu. Stashify disediakan hanya untuk pemakaian pribadi yang sah; kamu bertanggung jawab atas cara kamu menggunakannya.
+Stashify adalah project open-source independen dan tidak berafiliasi atau diendorse oleh Spotify, Google, YouTube, lrclib, atau operator lyrics.ovh. Provider default me-parse public embed pages Spotify; ini bukan API terdokumentasi dan bisa berubah atau rusak kapan pun. Mengunduh musik bisa melanggar terms of service platform tersebut dan bisa melanggar copyright di yurisdiksi kamu. Stashify disediakan hanya untuk pemakaian pribadi yang sah; kamu bertanggung jawab atas cara kamu menggunakannya.
 
 ---
 

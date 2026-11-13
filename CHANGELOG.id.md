@@ -2,6 +2,33 @@
 
 Semua perubahan penting di Stashify didokumentasikan di file ini. Formatnya mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), dan project ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.4.0
+
+Stashify sekarang punya health check bawaan, dry run lebih cepat, dan lirik yang lebih andal.
+
+### Fitur baru
+
+- **`stashify doctor`.** Memeriksa Python, FFmpeg, folder Downloads, embed pages Spotify, pencarian YouTube dan lyrics API, lalu mencetak laporan pass/fail. Gunakan saat unduhan gagal dan kamu ingin tahu bagian stack mana yang rusak.
+
+### Peningkatan
+
+- **Lirik dari lrclib.net.** Matching lebih akurat dengan artist, title, album dan durasi, dengan lyrics.ovh sebagai fallback.
+- **Lewati detail lookup saat tidak dibutuhkan.** `--dry-run` dan `url` tidak lagi mengambil detail per track, menghemat jaringan untuk playlist besar.
+
+### Perbaikan bug
+
+- **`meta --no-cover` / `--no-lyrics` dihormati.** Sebelumnya command membaca config file dan mengabaikan flag, sekarang flag yang menang.
+- **`url` mendapat `--provider`.** Sebelumnya flag ini tidak ada di command `url`, sekarang semua command metadata menerimanya.
+- **Flag bersama yang konsisten.** `--provider` dan `--no-details` pindah ke satu parser bersama sehingga semua command metadata menawarkannya.
+
+### Penggunaan
+
+```bash
+pip install --upgrade stashify-cli
+stashify doctor
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.3.0
 
 Stashify sekarang dikemas sebagai distribusi PyPI yang rapi, siap diterbitkan dengan trusted publisher.

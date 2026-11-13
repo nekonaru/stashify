@@ -224,6 +224,7 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 - Change the output folder with `-o "D:\Music"` and the naming scheme with `-t "{album}/{track_number} {title}"`
 - Download up to 8 tracks at once with `--jobs 4` (default 2)
 - Skip cover art or lyrics with `--no-cover` / `--no-lyrics`, or re-fetch everything with `--overwrite`
+- Check the whole stack with `stashify doctor` when a download fails; it reports Python, FFmpeg, network access to Spotify, YouTube and the lyrics API
 - Preview the match without downloading with `--dry-run`
 - Keep a folder in sync with a playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
 - Retag files you already have: `stashify meta file1.mp3 file2.mp3 --url "ALBUM_URL"`
@@ -269,7 +270,7 @@ Stashify is online only when it resolves metadata, searches for a source or fetc
 | Track, album, playlist and artist metadata | Spotify's public embed pages (default) or the Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (embedded into files) |
 | Audio source | YouTube, through yt-dlp |
-| Lyrics | lyrics.ovh (no key required) |
+| Lyrics | lrclib.net (no key required), lyrics.ovh as fallback |
 
 > [!NOTE]
 > Some tracks have no usable match on YouTube. Stashify reports the best candidate it found and skips tracks whose score is too low instead of downloading the wrong song.
@@ -285,6 +286,7 @@ stashify/
 │       ├── __init__.py           # package version
 │       ├── __main__.py           # python -m stashify entry point
 │       ├── cli.py                # argument parsing and commands
+│       ├── doctor.py             # end-to-end stack health check
 │       ├── pipeline.py           # shared download pipeline
 │       ├── spotify.py            # Spotify Web API client (optional, --provider api)
 │       ├── embed.py              # public embed page resolver (default provider)
@@ -292,7 +294,7 @@ stashify/
 │       ├── sources.py            # YouTube search and scoring
 │       ├── download.py           # yt-dlp download and FFmpeg conversion
 │       ├── tagger.py             # MP3, M4A, FLAC, Opus and WAV tagging
-│       ├── lyrics.py             # lyrics.ovh client
+│       ├── lyrics.py             # lrclib.net client (lyrics.ovh fallback)
 │       ├── output.py             # path templates and file naming
 │       ├── sync.py               # playlist sync state handling
 │       ├── config.py             # config file loading
@@ -380,6 +382,13 @@ Lint rules are enforced through the `[tool.ruff]` section in `pyproject.toml`.
 ## FAQ
 
 <details>
+<summary><b>Something fails; how do I diagnose it?</b></summary>
+
+Run `stashify doctor`. It checks Python, FFmpeg, the downloads folder, Spotify's embed pages, YouTube search and the lyrics API, and tells you exactly which part works and which does not.
+
+</details>
+
+<details>
 <summary><b>Do I need a Spotify account, login or developer app?</b></summary>
 
 No. The default provider reads Spotify's public pages, exactly what a browser sees without logging in. Nothing to create, nothing to log into, nothing to leak.
@@ -445,7 +454,7 @@ Yes. `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"` downloads new tracks an
 
 ## Disclaimer
 
-Stashify is an independent open-source project and is not affiliated with or endorsed by Spotify, Google, YouTube or the operators of lyrics.ovh. The default provider parses Spotify's public embed pages; this is not a documented API and can change or break at any time. Downloading music may violate the terms of service of those platforms and may infringe copyright in your jurisdiction. Stashify is provided for personal, lawful use only; you are responsible for how you use it.
+Stashify is an independent open-source project and is not affiliated with or endorsed by Spotify, Google, YouTube, lrclib or the operators of lyrics.ovh. The default provider parses Spotify's public embed pages; this is not a documented API and can change or break at any time. Downloading music may violate the terms of service of those platforms and may infringe copyright in your jurisdiction. Stashify is provided for personal, lawful use only; you are responsible for how you use it.
 
 ---
 
