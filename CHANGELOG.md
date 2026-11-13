@@ -18,6 +18,15 @@ Stashify now ships as a properly packaged PyPI distribution, ready to publish wi
 
 ### Usage
 
+Until the first PyPI publish (one-time maintainer setup, then run **Publish** from the Actions tab on the tag):
+
+```bash
+pip install git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
+After the package is live on PyPI:
+
 ```bash
 pip install stashify-cli
 stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
