@@ -154,6 +154,10 @@ def test_entity_missing_data_raises(monkeypatch):
                 b'{"props":{"pageProps":{"status": 404}}}</script>'
             )
 
-    monkeypatch.setattr(resolver._session, "get", lambda *a, **k: FakeResponse())
+    class FakeSession:
+        def get(self, *args, **kwargs):
+            return FakeResponse()
+
+    monkeypatch.setattr(resolver, "_session", lambda: FakeSession())
     with pytest.raises(StashifyError, match="could not be resolved"):
         resolver.fetch_tracks("https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M")

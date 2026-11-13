@@ -9,7 +9,15 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .config import DEFAULT_BITRATE, DEFAULT_FORMAT, DEFAULT_TEMPLATE, load_config
+from .config import (
+    DEFAULT_BITRATE,
+    DEFAULT_FORMAT,
+    DEFAULT_JOBS,
+    DEFAULT_TEMPLATE,
+    clamp_jobs,
+    default_download_dir,
+    load_config,
+)
 from .download import AUDIO_FORMATS
 from .embed import EmbedResolver
 from .errors import StashifyError
@@ -85,6 +93,10 @@ def build_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--no-details", action="store_true", default=None,
         help="skip per-track detail lookup (faster, fewer cover art files)",
+    )
+    output.add_argument(
+        "--jobs", type=int, default=None, metavar="N",
+        help=f"download up to N tracks in parallel (default: {DEFAULT_JOBS}, max 8)",
     )
 
     sub = parser.add_subparsers(dest="command", metavar="command", required=True)
@@ -175,7 +187,9 @@ def _options(args: argparse.Namespace) -> TrackOptions:
     no_cover = pick(getattr(args, "no_cover", None), "no_cover", False)
     no_lyrics = pick(getattr(args, "no_lyrics", None), "no_lyrics", False)
     return TrackOptions(
-        out_dir=Path(pick(getattr(args, "output", None), "output_dir", ".")),
+        out_dir=Path(
+            pick(getattr(args, "output", None), "output_dir", str(default_download_dir()))
+        ),
         template=pick(getattr(args, "template", None), "template", DEFAULT_TEMPLATE),
         audio_format=pick(getattr(args, "audio_format", None), "audio_format", DEFAULT_FORMAT),
         bitrate=pick(getattr(args, "bitrate", None), "bitrate", DEFAULT_BITRATE),
@@ -183,6 +197,7 @@ def _options(args: argparse.Namespace) -> TrackOptions:
         dry_run=bool(pick(getattr(args, "dry_run", None), "dry_run", False)),
         embed_cover=not no_cover,
         embed_lyrics=not no_lyrics,
+        jobs=clamp_jobs(pick(getattr(args, "jobs", None), "jobs", DEFAULT_JOBS)),
     )
 
 
@@ -200,6 +215,7 @@ def _cmd_download(args: argparse.Namespace) -> int:
         print("No tracks found for the given links.")
         return 1
     options = _options(args)
+    print(f"Saving to: {options.out_dir}")
     results = process_tracks(tracks, options)
     counts = summarize(results)
     print(
@@ -270,6 +286,7 @@ def _cmd_sync(args: argparse.Namespace) -> int:
     state = load_state(state_path)
     state["url"] = args.url
     missing, removed = plan_sync(state, tracks)
+    print(f"Syncing: {out_dir}")
 
     deleted = remove_entries(removed, out_dir)
     for path in deleted:

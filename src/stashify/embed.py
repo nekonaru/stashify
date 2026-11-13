@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import requests
@@ -48,7 +50,14 @@ class EmbedResolver:
     timeout: int = EMBED_TIMEOUT
 
     def __post_init__(self) -> None:
-        self._session = requests.Session()
+        self._local = threading.local()
+
+    def _session(self) -> requests.Session:
+        session = getattr(self._local, "session", None)
+        if session is None:
+            session = requests.Session()
+            self._local.session = session
+        return session
 
     # Public interface ------------------------------------------------------
 
@@ -92,7 +101,7 @@ class EmbedResolver:
 
     def _entity(self, kind: str, spotify_id: str) -> dict:
         try:
-            response = self._session.get(
+            response = self._session().get(
                 f"{EMBED_BASE}/{kind}/{spotify_id}",
                 headers={"User-Agent": USER_AGENT},
                 timeout=self.timeout,
@@ -175,18 +184,20 @@ class EmbedResolver:
         )
 
     def _enrich(self, tracks: list[Track]) -> list[Track]:
-        """Fill cover art, release year and proper artists via per-track embeds."""
-        enriched: list[Track] = []
-        for track in tracks:
+        """Fill cover art, release year and proper artists via per-track embeds.
+
+        Runs four lookups in parallel; on any failure the basic entry data is
+        kept.
+        """
+
+        def fetch(index: int, track: Track) -> tuple[int, Track]:
             track_id = _id_from_spotify_url(track.spotify_url)
             if not track_id:
-                enriched.append(track)
-                continue
+                return index, track
             try:
                 entity = self._entity("track", track_id)
             except StashifyError:
-                enriched.append(track)
-                continue
+                return index, track
             full = self._track_from_entity(entity)
             if full.artists:
                 track.artists = full.artists
@@ -194,8 +205,12 @@ class EmbedResolver:
                 track.release_date = full.release_date
             if full.cover_url:
                 track.cover_url = full.cover_url
-            enriched.append(track)
-        return enriched
+            return index, track
+
+        if len(tracks) > 1:
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                return [track for _, track in sorted(pool.map(fetch, range(len(tracks)), tracks))]
+        return [fetch(0, tracks[0])[1]]
 
 
 def _clean_str(value) -> str:

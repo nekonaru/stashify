@@ -16,6 +16,7 @@ from .errors import StashifyError
 DEFAULT_TEMPLATE = "{artist} - {title}"
 DEFAULT_FORMAT = "mp3"
 DEFAULT_BITRATE = "192k"
+DEFAULT_JOBS = 2
 
 _KNOWN_KEYS = {
     "output_dir": str,
@@ -28,6 +29,7 @@ _KNOWN_KEYS = {
     "no_lyrics": bool,
     "provider": str,
     "detailed": bool,
+    "jobs": int,
 }
 
 
@@ -37,6 +39,40 @@ def config_dir() -> Path:
         return Path(base) / "stashify"
     xdg = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
     return Path(xdg) / "stashify"
+
+
+def default_download_dir() -> Path:
+    """The user's downloads folder, resolved the same way other apps do it."""
+    override = os.environ.get("STASHIFY_DOWNLOAD_DIR")
+    if override:
+        return Path(override).expanduser()
+    if os.name == "nt":
+        profile = os.environ.get("USERPROFILE") or str(Path.home())
+        return Path(profile) / "Downloads"
+    xdg = os.environ.get("XDG_DOWNLOAD_DIR")
+    if xdg:
+        return Path(xdg).expanduser()
+    user_dirs = Path.home() / ".config" / "user-dirs.dirs"
+    try:
+        for line in user_dirs.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("XDG_DOWNLOAD_DIR="):
+                raw = line.split("=", 1)[1].strip().strip('"')
+                raw = raw.replace("$HOME", str(Path.home()))
+                return Path(raw)
+    except OSError:
+        pass
+    return Path.home() / "Downloads"
+
+
+def clamp_jobs(value) -> int:
+    try:
+        jobs = int(value)
+    except (TypeError, ValueError):
+        raise StashifyError(f"jobs must be a number between 1 and 8, got {value!r}.") from None
+    if not 1 <= jobs <= 8:
+        raise StashifyError(f"jobs must be between 1 and 8, got {jobs}.")
+    return jobs
 
 
 def default_config_path() -> Path:
@@ -62,5 +98,7 @@ def load_config(path: Path | None = None) -> dict:
             raise StashifyError(f"Config key {key!r} must be a boolean.")
         if expected is str and not isinstance(value, str):
             raise StashifyError(f"Config key {key!r} must be a string.")
+        if expected is int and not isinstance(value, int):
+            raise StashifyError(f"Config key {key!r} must be an integer.")
         cleaned[key] = value
     return cleaned

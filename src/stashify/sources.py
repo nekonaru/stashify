@@ -68,8 +68,7 @@ def score_candidate(track: Track, candidate_title: str, duration_seconds: float 
     return score
 
 
-def find_source(track: Track, search_count: int = SEARCH_COUNT) -> Source:
-    query = f"ytsearch{search_count}:{track.search_query()}"
+def _search_entries(query: str, search_count: int) -> list[dict]:
     options = {
         "quiet": True,
         "no_warnings": True,
@@ -79,15 +78,25 @@ def find_source(track: Track, search_count: int = SEARCH_COUNT) -> Source:
     }
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
-            result = ydl.extract_info(query, download=False)
+            result = ydl.extract_info(f"ytsearch{search_count}:{query}", download=False)
     except Exception as exc:  # yt-dlp raises many error types; surface one clear message.
         from .errors import SourceNotFoundError
 
-        raise SourceNotFoundError(
-            f"Could not search YouTube for {track.display()!r}: {exc}"
-        ) from exc
+        raise SourceNotFoundError(f"Could not search YouTube: {exc}") from exc
+    return (result or {}).get("entries") or []
 
-    entries = (result or {}).get("entries") or []
+
+def find_source(track: Track, search_count: int = SEARCH_COUNT) -> Source:
+    query = track.search_query()
+    entries = _search_entries(query, search_count)
+    if not entries:
+        # YouTube sometimes returns nothing for the plain "artist - title" query.
+        entries = _search_entries(f"{track.artists_text} {track.title}", search_count)
+    if not entries:
+        entries = _search_entries(
+            f"{track.artists_text} {track.title} audio", search_count
+        )
+
     best: Source | None = None
     for entry in entries:
         if not entry:
