@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
 
@@ -89,9 +88,3 @@ def download_audio(
     if candidates:
         return candidates[0]
     raise DownloadError(f"Download finished but no output file was produced for {output_base}")
-
-
-def temp_dir() -> Path:
-    path = Path(os.environ.get("TEMP", "/tmp")) / "stashify"
-    path.mkdir(parents=True, exist_ok=True)
-    return path

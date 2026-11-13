@@ -129,8 +129,15 @@ def build_parser() -> argparse.ArgumentParser:
 def _client(args: argparse.Namespace) -> SpotifyClient:
     config = load_config()
     market = args.market or config.get("market") or "US"
-    if getattr(args, "client_id", None) and getattr(args, "client_secret", None):
-        client_id, client_secret = args.client_id, args.client_secret
+    client_id_flag = getattr(args, "client_id", None)
+    client_secret_flag = getattr(args, "client_secret", None)
+    if client_id_flag or client_secret_flag:
+        if not client_id_flag or not client_secret_flag:
+            raise StashifyError(
+                "Pass both --client-id and --client-secret, "
+                "or neither to read them from the environment."
+            )
+        client_id, client_secret = client_id_flag, client_secret_flag
     else:
         client_id, client_secret = client_credentials_from_env()
     return SpotifyClient(client_id=client_id, client_secret=client_secret, market=market)
@@ -207,6 +214,7 @@ def _cmd_url(args: argparse.Namespace) -> int:
 
 
 def _cmd_meta(args: argparse.Namespace) -> int:
+    config = load_config()
     tracks = _fetch(args, [args.url])
     files = [Path(f) for f in args.files]
     missing = [f for f in files if not f.is_file()]
@@ -223,8 +231,8 @@ def _cmd_meta(args: argparse.Namespace) -> int:
     failures = 0
     for path, track in zip(files, tracks, strict=False):
         try:
-            cover = fetch_cover(track) if not load_config().get("no_cover") else None
-            lyrics = fetch_lyrics(track) if not load_config().get("no_lyrics") else None
+            cover = fetch_cover(track) if not config.get("no_cover") else None
+            lyrics = fetch_lyrics(track) if not config.get("no_lyrics") else None
             tag_file(path, track, cover, lyrics)
             print(f"Tagged {path} -> {track.display()}")
         except Exception as exc:
@@ -297,6 +305,11 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("Interrupted.", file=sys.stderr)
         return 130
+    except Exception as exc:  # Never leak a traceback unless asked for one.
+        if args.verbose:
+            raise
+        print(f"Unexpected error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
