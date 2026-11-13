@@ -1,3 +1,3 @@
 """Stashify: find music from your Spotify library on YouTube and save it locally."""
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"

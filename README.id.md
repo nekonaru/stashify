@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/stashify-mark.png" alt="Stashify logo" width="120" />
+  <img src="https://raw.githubusercontent.com/nekonaru/stashify/main/assets/stashify-mark.png" alt="Stashify logo" width="120" />
   <h1>Stashify: Spotify Music Downloader</h1>
   <p><b>Temukan track, album, atau playlist apa pun dari Spotify di YouTube dan simpan secara lokal<br/>
   dengan cover art, lirik dan metadata lengkap.</b></p>
@@ -14,7 +14,7 @@
 
 <br />
 
-[English](README.md) | **Bahasa Indonesia**
+[English](https://github.com/nekonaru/stashify/blob/main/README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
 > Stashify membaca halaman publik Spotify, tanpa akun atau login. Stashify hanya bisa melihat yang publik: track, album, artist dan playlist publik.
@@ -122,17 +122,17 @@ Setiap perintah `stashify ...` di panduan ini diketik di jendela tersebut, diiku
 
 ## Instalasi
 
-### Opsi A: Install langsung dengan pip (paling mudah)
+### Opsi A: Install dari PyPI (paling mudah)
 
 1. Pastikan Python 3.10 atau lebih baru terpasang (`python --version` harus menjawab)
 2. Pastikan FFmpeg terpasang (`ffmpeg -version` harus menjawab). Jika belum:
    - Windows: unduh dari [ffmpeg.org](https://ffmpeg.org/download.html) atau `winget install ffmpeg`
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (atau package manager distribusi kamu)
-3. Install Stashify:
+3. Install Stashify dari PyPI:
 
 ```bash
-pip install git+https://github.com/nekonaru/stashify.git
+pip install stashify-cli
 ```
 
 4. Verifikasi instalasi:
@@ -141,7 +141,19 @@ pip install git+https://github.com/nekonaru/stashify.git
 stashify --version
 ```
 
-### Opsi B: Build dari source (untuk development / untuk membaca atau mengubah kode)
+> [!NOTE]
+> Nama paket di PyPI adalah `stashify-cli`; command yang dipasangnya adalah `stashify`. Jika pip belum menemukan paket ini di PyPI, gunakan Opsi B.
+
+### Opsi B: Install langsung dari GitHub
+
+```bash
+pip install git+https://github.com/nekonaru/stashify.git
+stashify --version
+```
+
+Butuh Python 3.10+ dan FFmpeg, sama seperti di atas.
+
+### Opsi C: Build dari source (untuk development / untuk membaca atau mengubah kode)
 
 #### 1. Ambil kode proyek
 
@@ -290,6 +302,7 @@ stashify/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                # lint dan tests di setiap push
+│       ├── publish.yml           # publish ke PyPI on demand (OIDC)
 │       └── release.yml           # draft release dari changelog di tag
 ├── pyproject.toml                # packaging dan konfigurasi tool
 ├── SECURITY.md                   # kebijakan pelaporan kerentanan
@@ -301,6 +314,24 @@ stashify/
 ---
 
 ## Pengembangan
+
+### Menerbitkan ke PyPI
+
+Setup sekali, dilakukan oleh maintainer di PyPI:
+
+1. Buka [pypi.org](https://pypi.org), login, masuk ke **Account → Publishing**
+2. Tambahkan pending publisher dengan nilai persis berikut:
+   - Project name: `stashify-cli`
+   - Owner: `nekonaru`
+   - Repository: `stashify`
+   - Workflow name: `publish.yml`
+   - Environment name: kosongkan
+3. Push tag rilis, lalu jalankan **Publish** dari tab Actions pada tag yang ingin dirilis
+
+Workflow membangun wheel dan sdist, memeriksanya dengan `twine check`, smoke test wheel tersebut dan menerbitkan via OIDC. Tidak ada API token yang tersimpan di mana pun.
+
+> [!WARNING]
+> Stashify didistribusikan di PyPI sebagai `stashify-cli` karena nama `stashify` sudah dimiliki orang lain. Jangan coba mengambil nama itu.
 
 ### Bekerja pada kode
 
@@ -420,4 +451,4 @@ Stashify adalah project open-source independen dan tidak berafiliasi atau diendo
 
 ## Lisensi
 
-Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
+Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](https://github.com/nekonaru/stashify/blob/main/LICENSE) untuk informasi lebih lanjut.
