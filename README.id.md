@@ -14,7 +14,7 @@
 
 <br />
 
-[English](README.md) | **Bahasa Indonesia**
+[English](https://github.com/nekonaru/stashify/blob/main/README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
 > Stashify membaca halaman publik Spotify, tanpa akun atau login. Stashify hanya bisa melihat yang publik: track, album, artist dan playlist publik.
@@ -451,4 +451,4 @@ Stashify adalah project open-source independen dan tidak berafiliasi atau diendo
 
 ## Lisensi
 
-Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
+Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](https://github.com/nekonaru/stashify/blob/main/LICENSE) untuk informasi lebih lanjut.

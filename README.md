@@ -14,7 +14,7 @@
 
 <br />
 
-**English** | [Bahasa Indonesia](README.id.md)
+**English** | [Bahasa Indonesia](https://github.com/nekonaru/stashify/blob/main/README.id.md)
 
 > [!NOTE]
 > Stashify reads public Spotify pages, no account or login required. It can only see what is public: tracks, albums, artists and public playlists.
@@ -451,4 +451,4 @@ Stashify is an independent open-source project and is not affiliated with or end
 
 ## License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+Distributed under the **MIT License**. See [`LICENSE`](https://github.com/nekonaru/stashify/blob/main/LICENSE) for more information.
