@@ -1,0 +1,13 @@
+# Pre-commit hooks. Install with: pre-commit install
+# CI also runs the same checks, so a red commit never enters history accidentally.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
