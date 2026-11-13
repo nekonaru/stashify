@@ -21,6 +21,11 @@ TOKEN_URL = "https://accounts.spotify.com/api/token"
 API_BASE = "https://api.spotify.com/v1"
 DEFAULT_TIMEOUT = 15
 MAX_RETRIES = 3
+_API_UNAVAILABLE_MESSAGE = (
+    "Official Web API access to playlists and artist top tracks was removed by "
+    "Spotify in February 2026 (Development Mode apps). Use the default embed "
+    "provider instead, no credentials needed."
+)
 
 _ID_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 _KINDS = ("track", "album", "playlist", "artist")
@@ -167,11 +172,7 @@ class SpotifyClient:
             return [self.track_from_api(self._get(f"/tracks/{spotify_id}"))]
         if kind == "album":
             return self._album_tracks(spotify_id)
-        if kind == "playlist":
-            return self._playlist_tracks(spotify_id)
-        if kind == "artist":
-            return self._artist_tracks(spotify_id)
-        raise StashifyError(f"Unsupported Spotify link kind: {kind!r}")
+        raise StashifyError(_API_UNAVAILABLE_MESSAGE)
 
     def track_from_api(self, data: dict) -> Track:
         album = data.get("album") or {}
@@ -228,33 +229,6 @@ class SpotifyClient:
             tracks.append(track)
         return tracks
 
-    # Fields requested from the playlist endpoint, kept on one logical line.
-    _PLAYLIST_FIELDS = (
-        "items(track(name,artists,"
-        "album(name,artists,images,total_tracks,release_date),"
-        "track_number,disc_number,duration_ms,isrc,external_ids,"
-        "external_urls,explicit,is_local)),next"
-    )
-
-    def _playlist_tracks(self, playlist_id: str) -> list[Track]:
-        items = self._get_paged(
-            f"/playlists/{playlist_id}/tracks",
-            {"market": self.market, "fields": self._PLAYLIST_FIELDS},
-        )
-        tracks: list[Track] = []
-        for item in items:
-            data = (item or {}).get("track") or {}
-            if not data or data.get("is_local"):
-                continue
-            tracks.append(self.track_from_api(data))
-        return tracks
-
-    def _artist_tracks(self, artist_id: str) -> list[Track]:
-        data = self._get(
-            f"/artists/{artist_id}/top-tracks", {"market": self.market}
-        )
-        return [self.track_from_api(t) for t in data.get("tracks") or []]
-
 
 def _largest_image(images: list[dict]) -> str:
     if not images:
@@ -270,7 +244,8 @@ def _error_message(response: requests.Response) -> str:
     try:
         payload = response.json()
     except ValueError:
-        return "no details"
+        text = (response.text or "").strip().replace("\n", " ")
+        return text[:200] if text else "no details"
     error = payload.get("error") if isinstance(payload, dict) else None
     if isinstance(error, dict):
         message = error.get("message") or error.get("error_description")

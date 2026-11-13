@@ -26,6 +26,8 @@ _KNOWN_KEYS = {
     "overwrite": bool,
     "no_cover": bool,
     "no_lyrics": bool,
+    "provider": str,
+    "detailed": bool,
 }
 
 

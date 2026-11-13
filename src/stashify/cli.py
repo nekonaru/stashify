@@ -11,6 +11,7 @@ from pathlib import Path
 from . import __version__
 from .config import DEFAULT_BITRATE, DEFAULT_FORMAT, DEFAULT_TEMPLATE, load_config
 from .download import AUDIO_FORMATS
+from .embed import EmbedResolver
 from .errors import StashifyError
 from .lyrics import fetch_lyrics
 from .models import Track
@@ -76,6 +77,14 @@ def build_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--dry-run", action="store_true", default=None,
         help="print matches without downloading",
+    )
+    output.add_argument(
+        "--provider", choices=["embed", "api"], default=None,
+        help="metadata provider (default: embed, no account needed)",
+    )
+    output.add_argument(
+        "--no-details", action="store_true", default=None,
+        help="skip per-track detail lookup (faster, fewer cover art files)",
     )
 
     sub = parser.add_subparsers(dest="command", metavar="command", required=True)
@@ -143,6 +152,18 @@ def _client(args: argparse.Namespace) -> SpotifyClient:
     return SpotifyClient(client_id=client_id, client_secret=client_secret, market=market)
 
 
+def _resolver(args: argparse.Namespace):
+    config = load_config()
+    provider = getattr(args, "provider", None) or config.get("provider", "embed")
+    if provider == "embed":
+        no_details = bool(getattr(args, "no_details", False))
+        detailed = False if no_details else bool(config.get("detailed", True))
+        return EmbedResolver(detailed=detailed)
+    if provider == "api":
+        return _client(args)
+    raise StashifyError(f"Unknown provider {provider!r}. Choose from: embed, api.")
+
+
 def _options(args: argparse.Namespace) -> TrackOptions:
     config = load_config()
 
@@ -166,10 +187,10 @@ def _options(args: argparse.Namespace) -> TrackOptions:
 
 
 def _fetch(args: argparse.Namespace, urls: list[str]) -> list[Track]:
-    client = _client(args)
+    resolver = _resolver(args)
     tracks: list[Track] = []
     for url in urls:
-        tracks.extend(client.fetch_tracks(url))
+        tracks.extend(resolver.fetch_tracks(url))
     return tracks
 
 
