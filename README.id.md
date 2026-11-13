@@ -17,7 +17,7 @@
 [English](README.md) | **Bahasa Indonesia**
 
 > [!NOTE]
-> Stashify membaca library Spotify kamu lewat Spotify Web API resmi, memakai developer app milikmu yang gratis. Stashify tidak pernah meminta password Spotify.
+> Stashify membaca halaman publik Spotify, tanpa akun atau login. Stashify hanya bisa melihat yang publik: track, album, artist dan playlist publik.
 
 ---
 
@@ -43,7 +43,7 @@
 
 ## Tentang
 
-**Stashify** adalah command line tool yang mengubah link Spotify menjadi audio file dengan tag metadata lengkap di mesin kamu. Stashify me-resolve link lewat Spotify Web API, menemukan source yang paling cocok untuk tiap track di YouTube, mengonversi dengan FFmpeg, lalu menulis tag: title, artists, album, nomor track, tanggal rilis, ISRC, cover art dan lirik.
+**Stashify** adalah command line tool yang mengubah link Spotify menjadi audio file dengan tag metadata lengkap di mesin kamu. Stashify me-resolve link dari halaman publik Spotify, menemukan source yang paling cocok untuk tiap track di YouTube, mengonversi dengan FFmpeg, lalu menulis tag: title, artists, album, nomor track, tahun rilis, cover art dan lirik.
 
 > _"Library Spotify-mu, tersimpan rapi sebagai file asli."_
 
@@ -55,7 +55,8 @@
 
 | Fitur | Deskripsi |
 |---------|-------------|
-| **Track, album, playlist, artist** | Link Spotify apa pun di-resolve menjadi daftar track lengkap dan langsung diunduh semua |
+| **Track, album, playlist, artist** | Link Spotify yang publik di-resolve menjadi daftar track dan langsung diunduh semuanya (link artist mengambil 10 top tracks artist tersebut, playlist publik menampilkan hingga 50 track) |
+| **Tidak butuh akun** | Metadata diambil dari public embed pages Spotify, tanpa membuat apa pun |
 | **Source terbaik** | Hasil pencarian YouTube dinilai dari kecocokan durasi dan kata, skor tertinggi yang dipilih |
 | **Format audio** | MP3, M4A, Opus, FLAC atau WAV, dikonversi lewat FFmpeg |
 | **Bitrate control** | Bitrate bisa dipilih untuk format lossy, default `192k` |
@@ -66,8 +67,8 @@
 
 | Fitur | Deskripsi |
 |---------|-------------|
-| **Full tagging** | Title, artists, album, album artist, nomor track dan disc, tahun rilis, ISRC |
-| **Cover art** | Cover asli disematkan saat tersedia |
+| **Full tagging** | Title, artists, album (saat diketahui), album artist (saat diketahui), nomor track (album), nomor disc, tahun rilis, cover art |
+| **Cover art** | Cover asli disematkan, per track untuk playlist dan artist, cover album untuk album |
 | **Lirik** | Lirik plain-text dari community lyrics API dan disematkan saat ditemukan |
 | **Retag existing files** | `stashify meta` menulis metadata yang sama ke file yang sudah kamu punya |
 | **Path templates** | Template gaya `{artist} - {title}`, termasuk subfolder, aman untuk semua OS |
@@ -88,10 +89,9 @@
 |------------|-----------------|-------|
 | **Python** | 3.10 | Wajib |
 | **FFmpeg** | 6 | Wajib untuk konversi audio |
-| **Spotify developer app** | n/a | Gratis, wajib untuk membaca metadata |
 
 > [!TIP]
-> Kamu tidak butuh akun Spotify Premium. Akun gratis apa pun bisa membuat developer app yang dipakai untuk metadata.
+> Tidak butuh akun Spotify. Hanya konten publik (track, album, artist dan playlist publik) yang bisa di-resolve; playlist privat tidak bisa diakses tanpa entitlement resmi.
 
 ### Belum pernah pakai terminal? Mulai dari sini
 
@@ -192,30 +192,17 @@ Stashify adalah pure Python package. Tidak ada binary yang dikompilasi; instalas
 
 ### Pertama kali
 
-Stashify membaca metadata dari Spotify Web API, yang membutuhkan developer app gratis:
+Stashify tidak butuh akun, login atau API key. Install, lalu unduh:
 
-1. Buka [Spotify developer dashboard](https://developer.spotify.com/dashboard) dan buat app (nama bebas)
-2. Salin **Client ID** dan **Client Secret** app tersebut
-3. Ekspose ke shell kamu (jangan tempel ke file yang dikomit):
-
-```bash
-# Windows (PowerShell)
-$env:SPOTIFY_CLIENT_ID = "your-client-id"
-$env:SPOTIFY_CLIENT_SECRET = "your-client-secret"
-
-# macOS dan Linux (bash)
-export SPOTIFY_CLIENT_ID="your-client-id"
-export SPOTIFY_CLIENT_SECRET="your-client-secret"
-```
-
-4. Unduh playlist pertamamu:
+1. Temukan link Spotify untuk track, album, playlist atau artist (konten publik saja)
+2. Jalankan:
 
 ```bash
 stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 ```
 
 > [!NOTE]
-> Credential tersimpan di shell environment kamu. Stashify tidak pernah menulis credential ke disk dan tidak pernah memasukkannya ke log.
+> Unduhan hanya bekerja untuk konten publik. Playlist privat tidak bisa diakses: Spotify mewajibkan entitlement resmi untuk itu, yang tidak lagi didapat Development Mode app.
 
 ### Pemakaian sehari-hari
 
@@ -235,7 +222,7 @@ Path template mendukung `{artist}`, `{artists}`, `{title}`, `{album}`, `{album_a
 
 ## Konfigurasi
 
-Preferensi bisa disimpan di config file; secret tidak bisa. Credential hanya dibaca dari environment atau dari flag `--client-id` / `--client-secret`.
+Preferensi bisa disimpan di config file; secret tidak bisa. Provider default tidak membutuhkan apa pun.
 
 Lokasi config file: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stashify/config.json` (macOS dan Linux).
 
@@ -245,12 +232,14 @@ Lokasi config file: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stash
 | `audio_format` | string | `mp3` | Format audio default |
 | `bitrate` | string | `192k` | Bitrate untuk format lossy |
 | `template` | string | `{artist} - {title}` | Template path output |
-| `market` | string | `US` | Kode market dua huruf untuk lookup Spotify |
+| `market` | string | `US` | Kode market dua huruf (hanya dipakai dengan `--provider api`) |
+| `provider` | string | `embed` | `embed` (default, tanpa akun) atau `api` (Web API resmi, butuh developer app bereputasi Premium) |
+| `detailed` | boolean | `true` | Ambil detail per track (artists, cover, tahun rilis) untuk playlist |
 | `overwrite` | boolean | `false` | Unduh ulang file yang sudah ada |
 | `no_cover` | boolean | `false` | Jangan pernah menyematkan cover art |
 | `no_lyrics` | boolean | `false` | Jangan pernah menyematkan lirik |
 
-Flag command line selalu lebih diutamakan daripada config file.
+Flag command line selalu lebih diutamakan daripada config file. Gunakan `--provider api` dengan `--client-id` dan `--client-secret` (atau environment variable `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`) jika kamu punya entitlement Web API resmi; cara ini menambahkan ISRC dan metadata album untuk track dan album.
 
 ---
 
@@ -260,7 +249,7 @@ Stashify hanya online saat me-resolve metadata, mencari source, atau mengambil l
 
 | Tujuan | Sumber |
 |---------|--------|
-| Metadata track, album, playlist dan artist | Spotify Web API (developer app milikmu) |
+| Metadata track, album, playlist dan artist | Public embed pages Spotify (default) atau Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (disematkan ke file) |
 | Audio source | YouTube, lewat yt-dlp |
 | Lirik | lyrics.ovh (tanpa key) |
@@ -280,7 +269,8 @@ stashify/
 │       ├── __main__.py           # entry point python -m stashify
 │       ├── cli.py                # argument parsing dan command
 │       ├── pipeline.py           # shared download pipeline
-│       ├── spotify.py            # Spotify Web API client
+│       ├── spotify.py            # Spotify Web API client (opsional, --provider api)
+│       ├── embed.py              # resolver public embed page (default provider)
 │       ├── models.py             # data model Track
 │       ├── sources.py            # pencarian dan scoring YouTube
 │       ├── download.py           # download yt-dlp dan konversi FFmpeg
@@ -354,16 +344,23 @@ Lint rule ditegakkan lewat section `[tool.ruff]` di `pyproject.toml`.
 ## FAQ
 
 <details>
-<summary><b>Apakah saya butuh Spotify Premium atau login?</b></summary>
+<summary><b>Apakah saya butuh akun, login, atau developer app Spotify?</b></summary>
 
-Tidak. Metadata dibaca lewat Web API resmi dengan developer app gratis yang kamu buat sendiri. Stashify tidak pernah melihat password kamu.
+Tidak. Provider default membaca halaman publik Spotify, persis yang dilihat browser tanpa login. Tidak ada yang perlu dibuat, login atau dibocorkan.
 
 </details>
 
 <details>
-<summary><b>Apakah client secret saya aman?</b></summary>
+<summary><b>Kenapa playlist privat saya gagal?</b></summary>
 
-Ya. Stashify membacanya dari environment atau dari command line flag, tidak pernah dari file yang ditulisnya. Jangan commit, jangan bagikan. Jika bocor, rotate di dashboard.
+Halaman publik hanya ada untuk konten publik. Jika playlist-nya privat, halaman embed menampilkan halaman not-found dan Stashify melaporkannya. Buat playlist menjadi publik untuk memperbaikinya. Alternatifnya, akses resmi ke playlist milikmu membutuhkan developer app bereputasi Premium, lalu `stashify ... --provider api` dengan credential milikmu.
+
+</details>
+
+<details>
+<summary><b>Kenapa metadata tertentu tidak ada (ISRC, nama album)?</b></summary>
+
+Halaman publik tidak membawa semua field. Stashify menulis yang tersedia: title, artists, durasi, tahun rilis, cover art, nama album dan nomor track untuk album. ISRC hanya tersedia lewat Web API resmi.
 
 </details>
 
@@ -412,7 +409,7 @@ Bisa. `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"` mengunduh track baru d
 
 ## Disclaimer
 
-Stashify adalah project open-source independen dan tidak berafiliasi atau diendorse oleh Spotify, Google, YouTube, maupun operator lyrics.ovh. Mengunduh musik bisa melanggar terms of service platform tersebut dan bisa melanggar copyright di yurisdiksi kamu. Stashify disediakan hanya untuk pemakaian pribadi yang sah; kamu bertanggung jawab atas cara kamu menggunakannya.
+Stashify adalah project open-source independen dan tidak berafiliasi atau diendorse oleh Spotify, Google, YouTube, maupun operator lyrics.ovh. Provider default me-parse public embed pages Spotify; ini bukan API terdokumentasi dan bisa berubah atau rusak kapan pun. Mengunduh musik bisa melanggar terms of service platform tersebut dan bisa melanggar copyright di yurisdiksi kamu. Stashify disediakan hanya untuk pemakaian pribadi yang sah; kamu bertanggung jawab atas cara kamu menggunakannya.
 
 ---
 

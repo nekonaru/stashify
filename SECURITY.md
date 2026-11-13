@@ -12,9 +12,9 @@ acknowledge reports within 7 days.
 ## Scope
 
 Stashify is a command line tool. It runs on your machine, reads files you
-choose and reaches out to the Spotify Web API, the YouTube service (through
-yt-dlp) and a community lyrics endpoint. It does not listen on any network
-port and it does not store credentials on disk.
+choose and reaches out to Spotify's public embed pages, the YouTube service
+(through yt-dlp) and a community lyrics endpoint. It does not listen on any
+network port and it does not store credentials on disk.
 
 ## What you should know
 

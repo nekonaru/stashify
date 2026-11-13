@@ -2,6 +2,20 @@
 
 Semua perubahan penting di Stashify didokumentasikan di file ini. Formatnya mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), dan project ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.1.0
+
+Stashify langsung berfungsi dengan akun Spotify apa pun: metadata sekarang diambil dari halaman publik Spotify, tanpa developer app atau Premium.
+
+### Fitur baru
+
+- **Embed provider.** Metadata dibaca dari public embed pages Spotify, sehingga track, album, artist top tracks dan playlist publik di-resolve tanpa akun, login atau API key.
+- **Per-track enrichment.** Artists, tahun rilis dan cover art di-resolve per track untuk playlist, nonaktifkan dengan `--no-details`.
+
+### Peningkatan
+
+- **Public-page diagnostics.** Link privat atau yang dihapus sekarang menghasilkan pesan yang jelas, bukan kegagalan diam.
+- **Official API updated.** Perubahan Web API Februari 2026 diterapkan: playlist dan artist top tracks ditolak dengan panduan di `--provider api` (tracks dan album tetap berfungsi di sana), dan respons 403 sekarang menyertakan pesan dari server.
+
 ## v1.0.0
 
 Stashify me-resolve link Spotify apa pun menjadi audio file dengan tag metadata lengkap di mesin kamu, diambil dari YouTube.

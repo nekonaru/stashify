@@ -17,7 +17,7 @@
 **English** | [Bahasa Indonesia](README.id.md)
 
 > [!NOTE]
-> Stashify reads your Spotify library through the official Spotify Web API, using your own free developer app. It never asks for your Spotify password.
+> Stashify reads public Spotify pages, no account or login required. It can only see what is public: tracks, albums, artists and public playlists.
 
 ---
 
@@ -43,7 +43,7 @@
 
 ## About
 
-**Stashify** is a command line tool that turns a Spotify link into a properly tagged audio file on your machine. It resolves the link against the Spotify Web API, finds the best matching source for each track on YouTube, converts it with FFmpeg and tags it with title, artists, album, track number, release date, ISRC, cover art and lyrics.
+**Stashify** is a command line tool that turns a Spotify link into a properly tagged audio file on your machine. It resolves the link against Spotify's public pages, finds the best matching source for each track on YouTube, converts it with FFmpeg and tags it with title, artists, album, track number, release year, cover art and lyrics.
 
 > _"Your Spotify library, stashed as real files."_
 
@@ -55,7 +55,8 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Track, album, playlist, artist** | Any Spotify link resolves to a full track list and downloads everything in it |
+| **Track, album, playlist, artist** | Public Spotify links resolve to a track list and every track downloads (artist links fetch the artist's top 10 tracks, public playlists show up to 50 tracks) |
+| **No account needed** | Metadata comes from Spotify's public embed pages, nothing to create or configure |
 | **Best-match source** | YouTube results are scored on duration and word overlap, the strongest match wins |
 | **Audio formats** | MP3, M4A, Opus, FLAC or WAV, converted through FFmpeg |
 | **Bitrate control** | Choose the bitrate for lossy formats, default `192k` |
@@ -66,8 +67,8 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Full tagging** | Title, artists, album, album artist, track and disc numbers, release year, ISRC |
-| **Cover art** | Original cover is embedded when available |
+| **Full tagging** | Title, artists, album (when known), album artist (when known), track number (albums), disc numbers, release year, cover art |
+| **Cover art** | Original cover embedded, per track for playlists and artists, album cover for albums |
 | **Lyrics** | Plain-text lyrics fetched from a community lyrics API and embedded when found |
 | **Retag existing files** | `stashify meta` writes the same metadata into files you already have |
 | **Path templates** | `{artist} - {title}` style templates, subfolders included, safe for any OS |
@@ -88,10 +89,9 @@
 |------------|-----------------|-------|
 | **Python** | 3.10 | Required |
 | **FFmpeg** | 6 | Required for audio conversion |
-| **Spotify developer app** | n/a | Free, required to read metadata |
 
 > [!TIP]
-> You do not need a Spotify Premium account. Any free account can create the developer app used for metadata.
+> No Spotify account is required. Only public content (tracks, albums, artists and public playlists) can be resolved; private playlists are not reachable without an official API entitlement.
 
 ### Never used a terminal? Start here
 
@@ -192,30 +192,17 @@ Stashify is a pure Python package. There is no binary to compile; installation i
 
 ### First launch
 
-Stashify reads metadata from the Spotify Web API, which needs a free developer app:
+Stashify needs no account, no login and no API keys. Install it, then download:
 
-1. Go to the [Spotify developer dashboard](https://developer.spotify.com/dashboard) and create an app (any name works)
-2. Copy the app's **Client ID** and **Client Secret**
-3. Expose them to your shell (do not paste them into files that get committed):
-
-```bash
-# Windows (PowerShell)
-$env:SPOTIFY_CLIENT_ID = "your-client-id"
-$env:SPOTIFY_CLIENT_SECRET = "your-client-secret"
-
-# macOS and Linux (bash)
-export SPOTIFY_CLIENT_ID="your-client-id"
-export SPOTIFY_CLIENT_SECRET="your-client-secret"
-```
-
-4. Download your first playlist:
+1. Find any Spotify link for a track, album, playlist or artist (public content only)
+2. Run:
 
 ```bash
 stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 ```
 
 > [!NOTE]
-> The credentials stay in your shell environment. Stashify never writes them to disk and never logs them.
+> The download works for public content only. Private playlists are not reachable: Spotify requires an official API entitlement for that, which Development Mode apps no longer get.
 
 ### Everyday use
 
@@ -235,7 +222,7 @@ The path template supports `{artist}`, `{artists}`, `{title}`, `{album}`, `{albu
 
 ## Configuration
 
-Preferences can be stored in a config file; secrets cannot. Credentials are read from the environment or from `--client-id` / `--client-secret` flags only.
+Preferences can be stored in a config file; secrets cannot. The default provider needs none.
 
 Config file locations: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stashify/config.json` (macOS and Linux).
 
@@ -245,12 +232,14 @@ Config file locations: `%APPDATA%\stashify\config.json` (Windows), `~/.config/st
 | `audio_format` | string | `mp3` | Default audio format |
 | `bitrate` | string | `192k` | Bitrate for lossy formats |
 | `template` | string | `{artist} - {title}` | Output path template |
-| `market` | string | `US` | Two-letter market code used for Spotify lookups |
+| `market` | string | `US` | Two-letter market code (only used with `--provider api`) |
+| `provider` | string | `embed` | `embed` (default, no account) or `api` (official Web API, needs a Premium-entitled developer app) |
+| `detailed` | boolean | `true` | Fetch per-track details (artists, cover, release year) for playlists |
 | `overwrite` | boolean | `false` | Re-download files that already exist |
 | `no_cover` | boolean | `false` | Never embed cover art |
 | `no_lyrics` | boolean | `false` | Never embed lyrics |
 
-Command line flags always win over the config file.
+Command line flags always win over the config file. Use `--provider api` with `--client-id` and `--client-secret` (or `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` environment variables) if you have an official Web API entitlement; it adds ISRC and album metadata for tracks and albums.
 
 ---
 
@@ -260,7 +249,7 @@ Stashify is online only when it resolves metadata, searches for a source or fetc
 
 | Purpose | Source |
 |---------|--------|
-| Track, album, playlist and artist metadata | Spotify Web API (your own developer app) |
+| Track, album, playlist and artist metadata | Spotify's public embed pages (default) or the Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (embedded into files) |
 | Audio source | YouTube, through yt-dlp |
 | Lyrics | lyrics.ovh (no key required) |
@@ -280,7 +269,8 @@ stashify/
 │       ├── __main__.py           # python -m stashify entry point
 │       ├── cli.py                # argument parsing and commands
 │       ├── pipeline.py           # shared download pipeline
-│       ├── spotify.py            # Spotify Web API client
+│       ├── spotify.py            # Spotify Web API client (optional, --provider api)
+│       ├── embed.py              # public embed page resolver (default provider)
 │       ├── models.py             # Track data model
 │       ├── sources.py            # YouTube search and scoring
 │       ├── download.py           # yt-dlp download and FFmpeg conversion
@@ -354,16 +344,23 @@ Lint rules are enforced through the `[tool.ruff]` section in `pyproject.toml`.
 ## FAQ
 
 <details>
-<summary><b>Do I need Spotify Premium or a login?</b></summary>
+<summary><b>Do I need a Spotify account, login or developer app?</b></summary>
 
-No. Metadata is read through the official Web API with a free developer app you create yourself. Stashify never sees your password.
+No. The default provider reads Spotify's public pages, exactly what a browser sees without logging in. Nothing to create, nothing to log into, nothing to leak.
 
 </details>
 
 <details>
-<summary><b>Is my client secret safe?</b></summary>
+<summary><b>Why does my private playlist fail?</b></summary>
 
-Yes. Stashify reads it from the environment or from command line flags, never from files it writes. Do not commit it, do not share it. If it leaks, rotate it in the dashboard.
+Public pages only exist for public content. If the playlist is private, the embed page shows a not-found page and Stashify reports it. Making the playlist public fixes it. Alternatively, official API access to your own playlists requires a Premium-entitled developer app, then `stashify ... --provider api` with your own credentials.
+
+</details>
+
+<details>
+<summary><b>Why is some metadata missing (ISRC, album name)?</b></summary>
+
+Public pages do not carry every field. Stashify tags what is available: title, artists, duration, release year, cover art, album name and track numbers for albums. ISRC is only available through the official Web API.
 
 </details>
 
@@ -412,7 +409,7 @@ Yes. `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"` downloads new tracks an
 
 ## Disclaimer
 
-Stashify is an independent open-source project and is not affiliated with or endorsed by Spotify, Google, YouTube or the operators of lyrics.ovh. Downloading music may violate the terms of service of those platforms and may infringe copyright in your jurisdiction. Stashify is provided for personal, lawful use only; you are responsible for how you use it.
+Stashify is an independent open-source project and is not affiliated with or endorsed by Spotify, Google, YouTube or the operators of lyrics.ovh. The default provider parses Spotify's public embed pages; this is not a documented API and can change or break at any time. Downloading music may violate the terms of service of those platforms and may infringe copyright in your jurisdiction. Stashify is provided for personal, lawful use only; you are responsible for how you use it.
 
 ---
 

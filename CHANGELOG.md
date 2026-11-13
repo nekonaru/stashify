@@ -2,6 +2,20 @@
 
 All notable changes to Stashify are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.1.0
+
+Stashify works out of the box with any Spotify account: metadata now comes from Spotify's public pages, no developer app or Premium needed.
+
+### New features
+
+- **Embed provider.** Metadata is read from Spotify's public embed pages, so tracks, albums, artist top tracks and public playlists resolve without an account, login or API key.
+- **Per-track enrichment.** Artists, release year and cover art are resolved per track for playlists, disable with `--no-details`.
+
+### Improvements
+
+- **Public-page diagnostics.** Private or removed links now produce a clear message instead of a silent failure.
+- **Official API updated.** February 2026 Web API changes are applied: playlists and artist top tracks are rejected with guidance on `--provider api` (tracks and albums still work there), and 403 responses now include the server's message.
+
 ## v1.0.0
 
 Stashify resolves any Spotify link to a properly tagged audio file on your machine, sourced from YouTube.
