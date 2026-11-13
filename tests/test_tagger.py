@@ -106,6 +106,20 @@ def test_tag_m4a_round_trip(tmp_path):
 
 
 @needs_ffmpeg
+def test_tag_wav_round_trip(tmp_path):
+    audio = render_audio(tmp_path, "track.wav", ["-c:a", "pcm_s16le"])
+    tag_file(audio, make_track(), None, None)
+
+    from mutagen.wave import WAVE
+
+    tags = WAVE(audio).tags
+    assert tags is not None
+    assert tags["TIT2"].text[0] == "Song"
+    assert tags["TPE1"].text[0] == "Artist, Guest"
+    assert tags["TRCK"].text[0] == "4/11"
+
+
+@needs_ffmpeg
 def test_tag_opus_round_trip(tmp_path):
     try:
         audio = render_audio(tmp_path, "track.opus", ["-c:a", "libopus"])

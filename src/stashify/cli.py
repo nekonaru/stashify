@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from . import __version__
@@ -56,7 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     output = argparse.ArgumentParser(add_help=False)
     output.add_argument(
-        "-o", "--output", default=None, help="output directory (default: .)"
+        "-o", "--output", default=None,
+        help="output directory (default: Downloads folder)"
     )
     output.add_argument(
         "-t", "--template", default=None,
@@ -229,7 +231,12 @@ def _cmd_save(args: argparse.Namespace) -> int:
     tracks = _fetch(args, args.urls)
     payload = json.dumps([t.to_dict() for t in tracks], indent=2, ensure_ascii=False)
     if args.save_file:
-        Path(args.save_file).write_text(payload + "\n", encoding="utf-8")
+        save_path = Path(args.save_file)
+        try:
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            save_path.write_text(payload + "\n", encoding="utf-8")
+        except OSError as exc:
+            raise StashifyError(f"Could not write {save_path}: {exc}") from exc
         print(f"Saved {len(tracks)} track(s) to {args.save_file}")
     else:
         print(payload)
@@ -238,15 +245,26 @@ def _cmd_save(args: argparse.Namespace) -> int:
 
 def _cmd_url(args: argparse.Namespace) -> int:
     tracks = _fetch(args, args.urls)
-    failures = 0
-    for track in tracks:
+
+    def work(index: int, track: Track) -> tuple[int, str, bool]:
         try:
             source = find_source(track)
         except StashifyError as exc:
+            return index, f"{track.display()} - not found: {exc}", False
+        return index, f"{track.display()} - {source.url}", True
+
+    total = len(tracks)
+    rows: list[tuple[str, bool] | None] = [None] * total
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for index, line, ok in pool.map(work, range(total), tracks):
+            rows[index] = (line, ok)
+    failures = 0
+    for row in rows:
+        assert row is not None
+        line, ok = row
+        print(line)
+        if not ok:
             failures += 1
-            print(f"{track.display()} - not found: {exc}")
-            continue
-        print(f"{track.display()} - {source.url}")
     return 1 if failures else 0
 
 

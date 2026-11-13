@@ -142,6 +142,33 @@ def test_next_data_regex():
     assert json.loads(match.group(1)) == {"a": 1}
 
 
+def test_entity_too_deeply_nested(monkeypatch):
+    resolver = EmbedResolver(detailed=False)
+    nested = "[" * 1500 + "]" * 1500
+    html = (
+        '<script id="__NEXT_DATA__" type="application/json">'
+        f'{{"a": {nested}}}</script>'
+    )
+
+    class FakeResponse:
+        status_code = 200
+
+        def iter_content(self, chunk_size=65536):
+            yield html.encode()
+
+    class FakeSession:
+        def get(self, *args, **kwargs):
+            return FakeResponse()
+
+    def raiser(*args, **kwargs):
+        raise RecursionError()
+
+    monkeypatch.setattr(resolver, "_session", lambda: FakeSession())
+    monkeypatch.setattr("stashify.embed.json.loads", raiser)
+    with pytest.raises(StashifyError, match="deeply nested"):
+        resolver.fetch_tracks("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC")
+
+
 def test_entity_missing_data_raises(monkeypatch):
     resolver = EmbedResolver(detailed=False)
 

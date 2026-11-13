@@ -79,3 +79,24 @@ def test_state_entry_relative_path(tmp_path):
     target.write_bytes(b"x")
     entry = state_entry(make_track(), target, out_dir)
     assert entry["path"].replace("\\", "/") == "sub/song.mp3"
+
+
+def test_state_entry_uses_forward_slashes(tmp_path):
+    out_dir = tmp_path / "music"
+    out_dir.mkdir()
+    target = out_dir / "sub" / "song.mp3"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"x")
+    entry = state_entry(make_track(), target, out_dir)
+    assert "\\" not in entry["path"]
+
+
+def test_remove_entries_handles_legacy_backslash_paths(tmp_path):
+    out_dir = tmp_path / "music"
+    sub = out_dir / "sub"
+    sub.mkdir(parents=True)
+    legacy = sub / "song.mp3"
+    legacy.write_bytes(b"x")
+    deleted = remove_entries([{"key": "k", "path": "sub\\song.mp3"}], out_dir)
+    assert str(legacy) in deleted
+    assert not legacy.exists()

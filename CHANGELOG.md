@@ -2,6 +2,28 @@
 
 All notable changes to Stashify are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.1
+
+Internal audit: every entry point re-checked, real end-to-end downloads verified, security pass re-run.
+
+### Bug fixes
+
+- **Sync state portability.** `stashify.sync.json` stores forward slashes, and older files with OS backslashes are read correctly, so deletes never silently fail after a folder is moved between OSes.
+- **Bitrate validation.** `--bitrate` now rejects malformed values up front instead of feeding them to the converter.
+- **Clear error for unwritable output.** Writing `--save-file` to an unwritable path now reports a clear error instead of a raw OS traceback.
+
+### Improvements
+
+- **Parallel and ordered URL lookup.** `stashify url` resolves tracks in parallel and keeps the input order.
+- **Deeper JSON hardening.** RecursionError from deeply nested embed pages produces a clear error, and WAV tagging is covered by a round trip test.
+
+### Usage
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.2.0
 
 Downloads now land in the operating system's Downloads folder, and large playlists download in parallel.

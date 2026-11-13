@@ -2,6 +2,28 @@
 
 Semua perubahan penting di Stashify didokumentasikan di file ini. Formatnya mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), dan project ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.1
+
+Audit internal: setiap entry point diperiksa ulang, unduhan end-to-end nyata diverifikasi, security pass dijalankan lagi.
+
+### Perbaikan bug
+
+- **Portabilitas sync state.** `stashify.sync.json` menyimpan forward slash, dan file lama dengan backslash OS dibaca dengan benar, sehingga delete tidak pernah gagal diam-diam saat folder dipindah antar OS.
+- **Validasi bitrate.** `--bitrate` sekarang menolak nilai yang salah sejak awal, bukan memberikannya ke converter.
+- **Error jelas untuk output yang tidak bisa ditulis.** Menulis `--save-file` ke path yang tidak bisa ditulis sekarang melaporkan error yang jelas, bukan traceback OS mentah.
+
+### Peningkatan
+
+- **URL lookup paralel dan berurutan.** `stashify url` me-resolve track secara paralel dan menjaga urutan input.
+- **Penguatan JSON lebih dalam.** RecursionError dari halaman embed yang sangat dalam menghasilkan error yang jelas, dan tagging WAV dibuktikan dengan round trip test.
+
+### Penggunaan
+
+```bash
+pip install --upgrade git+https://github.com/nekonaru/stashify.git
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.2.0
 
 Unduhan sekarang mendarat di folder Downloads milik OS, dan playlist besar diunduh secara paralel.

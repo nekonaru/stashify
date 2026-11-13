@@ -64,6 +64,8 @@ def remove_entries(removed: list[dict], out_dir: Path) -> list[str]:
         rel = entry.get("path")
         if not rel:
             continue
+        # Older state files may contain OS-native separators; normalize both.
+        rel = str(rel).replace("\\", "/")
         candidate = (out_dir / rel).resolve()
         try:
             candidate.relative_to(out_dir)
@@ -82,9 +84,10 @@ def state_entry(track: Track, path: Path, out_dir: Path) -> dict:
         rel = Path(path).resolve().relative_to(Path(out_dir).resolve())
     except ValueError:
         rel = Path(path)
+    # Always store forward slashes so the file can be moved across OSes.
     return {
         "key": track_key(track),
-        "path": str(rel),
+        "path": rel.as_posix(),
         "title": track.title,
         "artist": track.artist,
     }

@@ -132,6 +132,8 @@ class EmbedResolver:
             payload = json.loads(match.group(1))
         except json.JSONDecodeError as exc:
             raise StashifyError("Spotify embed page contains invalid JSON.") from exc
+        except RecursionError as exc:
+            raise StashifyError("Spotify embed page JSON is too deeply nested.") from exc
         entity = (
             ((payload.get("props") or {}).get("pageProps") or {})
             .get("state", {})

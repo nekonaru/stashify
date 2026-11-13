@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -20,6 +21,18 @@ _CODEC_MAP = {
     "flac": "flac",
     "wav": "wav",
 }
+
+_BITRATE_RE = re.compile(r"^\d{2,4}k?$", re.IGNORECASE)
+
+
+def validate_bitrate(bitrate: str) -> str:
+    """Validate a bitrate like 128k, 192k, 320k. Raises DownloadError if bad."""
+    text = (bitrate or "").strip().lower()
+    if not _BITRATE_RE.match(text):
+        raise DownloadError(
+            f"Invalid bitrate {bitrate!r}. Use something like 128k, 192k or 320k."
+        )
+    return text
 
 
 def ffmpeg_available() -> bool:
@@ -42,6 +55,7 @@ def download_audio(
             f"Unsupported audio format {audio_format!r}. "
             f"Choose from: {', '.join(sorted(AUDIO_FORMATS))}."
         )
+    bitrate = validate_bitrate(bitrate)
     if not ffmpeg_available():
         raise DownloadError(
             "FFmpeg was not found on PATH. Install FFmpeg first: "
