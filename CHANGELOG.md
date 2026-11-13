@@ -2,6 +2,27 @@
 
 All notable changes to Stashify are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.3.0
+
+Stashify now ships as a properly packaged PyPI distribution, ready to publish with a trusted publisher.
+
+### New features
+
+- **PyPI packaging.** Stashify is distributed on PyPI as `stashify-cli` (the name `stashify` already belongs to someone else). The `stashify` command and import name are unchanged; `pip install stashify-cli` is the new recommended install.
+
+### Improvements
+
+- **Trusted publishing.** A manual publish workflow builds the wheel and sdist, checks them with `twine check`, smoke tests the wheel and publishes over OIDC without any stored API token.
+- **Complete metadata.** Project URLs, SPDX license expression, license file and classifiers set; PyPI now renders the full README.
+- **Pre-commit hook.** Optional `.pre-commit-config.yaml` runs ruff and gitleaks before each commit.
+
+### Usage
+
+```bash
+pip install stashify-cli
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID"
+```
+
 ## v1.2.1
 
 Internal audit: every entry point re-checked, real end-to-end downloads verified, security pass re-run.
