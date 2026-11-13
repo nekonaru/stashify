@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/stashify-mark.png" alt="Stashify logo" width="120" />
+  <img src="https://raw.githubusercontent.com/nekonaru/stashify/main/assets/stashify-mark.png" alt="Stashify logo" width="120" />
   <h1>Stashify: Spotify Music Downloader</h1>
   <p><b>Find any track, album or playlist from Spotify on YouTube and save it locally<br/>
   with cover art, lyrics and full metadata.</b></p>
@@ -122,17 +122,17 @@ Every `stashify ...` command in this guide is typed in that window, followed by 
 
 ## Installation
 
-### Option A: Install directly with pip (easiest)
+### Option A: Install from PyPI (easiest)
 
 1. Make sure Python 3.10 or newer is installed (`python --version` should answer)
 2. Make sure FFmpeg is installed (`ffmpeg -version` should answer). If not:
    - Windows: download from [ffmpeg.org](https://ffmpeg.org/download.html) or `winget install ffmpeg`
    - macOS: `brew install ffmpeg`
    - Linux: `sudo apt install ffmpeg` (or your distribution's package manager)
-3. Install Stashify:
+3. Install Stashify from PyPI:
 
 ```bash
-pip install git+https://github.com/nekonaru/stashify.git
+pip install stashify-cli
 ```
 
 4. Verify the install:
@@ -141,7 +141,19 @@ pip install git+https://github.com/nekonaru/stashify.git
 stashify --version
 ```
 
-### Option B: Build from source (for development / to read or change the code)
+> [!NOTE]
+> The PyPI package is `stashify-cli`; the command it installs is `stashify`. If pip cannot find the package on PyPI yet, use Option B.
+
+### Option B: Install directly from GitHub
+
+```bash
+pip install git+https://github.com/nekonaru/stashify.git
+stashify --version
+```
+
+Needs Python 3.10+ and FFmpeg, same as above.
+
+### Option C: Build from source (for development / to read or change the code)
 
 #### 1. Get the project code
 
@@ -290,6 +302,7 @@ stashify/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                # lint and tests on every push
+│       ├── publish.yml           # publish to PyPI on demand (OIDC)
 │       └── release.yml           # draft release from changelog on tags
 ├── pyproject.toml                # packaging and tool configuration
 ├── SECURITY.md                   # vulnerability reporting policy
@@ -301,6 +314,24 @@ stashify/
 ---
 
 ## Development
+
+### Publishing to PyPI
+
+One-time setup, done by the maintainer on PyPI:
+
+1. Open [pypi.org](https://pypi.org), sign in, go to **Account → Publishing**
+2. Add a pending publisher with these exact values:
+   - Project name: `stashify-cli`
+   - Owner: `nekonaru`
+   - Repository: `stashify`
+   - Workflow name: `publish.yml`
+   - Environment name: leave empty
+3. Push a release tag, then run **Publish** from the Actions tab on the tag you want to release
+
+The workflow builds the wheel and sdist, checks them with `twine check`, smoke tests the wheel and publishes via OIDC. No API token is stored anywhere.
+
+> [!WARNING]
+> Stashify is distributed on PyPI as `stashify-cli` because the name `stashify` already belongs to someone else. Do not try to claim it.
 
 ### Working on the code
 
