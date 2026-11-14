@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 import yt_dlp
 
 from .errors import DownloadError
+from .models import Track
 from .sources import Source
 
 LOSSLESS_FORMATS = {"flac", "wav"}
@@ -39,15 +42,85 @@ def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
+def _ffprobe_duration(path: Path) -> float:
+    """Run ffprobe and return the stream duration in seconds."""
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe is None:
+        raise DownloadError(
+            "ffprobe was not found on PATH. Install FFmpeg first: "
+            "https://ffmpeg.org/download.html"
+        )
+    command = [
+        ffprobe,
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "json",
+        str(path),
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise DownloadError("ffprobe is not runnable on this system.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise DownloadError(f"ffprobe timed out on {path}.") from exc
+    if result.returncode != 0:
+        detail = (result.stderr or "unknown error").strip()
+        raise DownloadError(f"ffprobe could not read {path}: {detail}")
+    try:
+        payload = json.loads(result.stdout or "{}")
+        return float(payload["format"]["duration"])
+    except (ValueError, KeyError) as exc:
+        raise DownloadError(f"ffprobe returned no duration for {path}.") from exc
+
+
+def verify_media(
+    path: Path,
+    track: Track | None,
+    tolerance: float = 0.20,
+    minimum_seconds: float = 20.0,
+) -> tuple[bool, str]:
+    """Verify a downloaded audio file is readable and roughly the right length.
+
+    Returns (ok, detail). ``ok`` is False when the file is corrupt or unreadable.
+    ``detail`` carries a human-readable summary, including warnings for
+    suspiciously long or short durations (which does not delete the file).
+    """
+    if not Path(path).is_file():
+        return False, "file is missing"
+    if Path(path).stat().st_size == 0:
+        return False, "file is empty"
+    try:
+        duration = _ffprobe_duration(Path(path))
+    except DownloadError as exc:
+        return False, str(exc)
+    if track is not None and track.duration_ms > 0:
+        expected = track.duration_ms / 1000.0
+        allowed = max(minimum_seconds, expected * tolerance)
+        diff = abs(duration - expected)
+        if diff > allowed:
+            return True, f"duration mismatch (expected {expected:.0f}s, got {duration:.0f}s)"
+    return True, f"verified ({duration:.0f}s)"
+
+
+
 def download_audio(
     source: Source,
     output_base: Path,
     audio_format: str = "mp3",
     bitrate: str = "192k",
+    cookies_from_browser: str | None = None,
 ) -> Path:
     """Download source audio and convert to audio_format.
 
     output_base is the target path without extension. Returns the final path.
+    `cookies_from_browser` is passed to yt-dlp so authenticated browsing
+    sessions can bypass YouTube bot checks.
     """
     audio_format = audio_format.lower()
     if audio_format not in AUDIO_FORMATS:
@@ -82,6 +155,8 @@ def download_audio(
             }
         ],
     }
+    if cookies_from_browser:
+        options["cookiesfrombrowser"] = (cookies_from_browser,)
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
             ydl.download([source.url])

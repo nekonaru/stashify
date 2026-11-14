@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from .download import download_audio
+from .download import download_audio, verify_media
 from .errors import StashifyError
 from .lyrics import fetch_lyrics
 from .models import Track
@@ -27,6 +27,8 @@ class TrackOptions:
     embed_cover: bool = True
     embed_lyrics: bool = True
     jobs: int = 1
+    verify: bool = True
+    cookies_from_browser: str | None = None
 
 
 @dataclass
@@ -106,7 +108,7 @@ def _process_one(
         return result
 
     try:
-        source = find_source(track)
+        source = find_source(track, cookies_from_browser=options.cookies_from_browser)
     except StashifyError as exc:
         result = TrackResult(track, "failed", detail=str(exc))
         _emit(state, progress, f"{prefix} - source not found: {exc}")
@@ -125,11 +127,31 @@ def _process_one(
             target.with_suffix(""),
             audio_format=options.audio_format,
             bitrate=options.bitrate,
+            cookies_from_browser=options.cookies_from_browser,
         )
     except StashifyError as exc:
         result = TrackResult(track, "failed", source_url=source.url, detail=str(exc))
         _emit(state, progress, f"{prefix} - download failed: {exc}")
         return result
+
+    verify_note = ""
+    if options.verify:
+        ok, detail = verify_media(path, track)
+        if not ok:
+            try:
+                Path(path).unlink(missing_ok=True)
+            except OSError:
+                pass
+            result = TrackResult(
+                track,
+                "failed",
+                source_url=source.url,
+                detail=f"media verification failed: {detail}",
+            )
+            _emit(state, progress, f"{prefix} - verification failed: {detail}")
+            return result
+        if "mismatch" in detail:
+            verify_note = f" [{detail}]"
 
     cover = _cover_for(state, track, options)
     lyrics = fetch_lyrics(track) if options.embed_lyrics else None
@@ -139,8 +161,11 @@ def _process_one(
     except Exception as exc:  # Keep the audio file; only the tags failed.
         tag_note = f" (tags not written: {exc})"
 
-    result = TrackResult(track, "downloaded", path, source_url=source.url, detail=tag_note)
-    _emit(state, progress, f"{prefix} - saved: {path}{tag_note}")
+    result = TrackResult(
+        track, "downloaded", path, source_url=source.url,
+        detail=tag_note + verify_note,
+    )
+    _emit(state, progress, f"{prefix} - saved: {path}{tag_note}{verify_note}")
     return result
 
 
