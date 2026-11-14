@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from .models import Track
 
@@ -17,6 +18,29 @@ _TOKENS = re.compile(r"\{([a-z_]+)\}")
 def release_year(track: Track) -> str:
     match = re.match(r"^(\d{4})", track.release_date or "")
     return match.group(1) if match else ""
+
+
+def write_m3u(entries, out_dir: Path, name: str = "stashify.m3u") -> Path:
+    """Write an Extended M3U playlist for (track, path) pairs.
+
+    Paths are written relative to the playlist's own folder, so the whole
+    folder can be moved without breaking the list.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / name
+    lines = ["#EXTM3U"]
+    for track, path in entries:
+        duration = int(track.duration_ms // 1000) if track.duration_ms else -1
+        label = f"{track.artists_text} - {track.title}".replace("\n", " ").replace("\r", " ")
+        lines.append(f"#EXTINF:{duration},{label}")
+        try:
+            rel = Path(path).resolve().relative_to(out_dir.resolve())
+            lines.append(rel.as_posix())
+        except ValueError:
+            lines.append(str(path))
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return target
 
 
 def safe_segment(text: str) -> str:

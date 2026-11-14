@@ -57,11 +57,14 @@
 |---------|-------------|
 | **Track, album, playlist, artist** | Link Spotify yang publik di-resolve menjadi daftar track dan langsung diunduh semuanya (link artist mengambil 10 top tracks artist tersebut, playlist publik menampilkan hingga 50 track) |
 | **Tidak butuh akun** | Metadata diambil dari public embed pages Spotify, tanpa membuat apa pun |
-| **Source terbaik** | Hasil pencarian YouTube dinilai dari kecocokan durasi dan kata, skor tertinggi yang dipilih |
+| **Source terbaik** | Hasil pencarian YouTube dinilai dari kecocokan durasi dan kata, dengan SoundCloud sebagai fallback saat YouTube tidak memberikan apa pun yang layak |
 | **Format audio** | MP3, M4A, Opus, FLAC atau WAV, dikonversi lewat FFmpeg |
 | **Bitrate control** | Bitrate bisa dipilih untuk format lossy, default `192k` |
 | **Skip existing** | File yang sudah ada dilewati, `--overwrite` memaksa unduh ulang |
 | **Download paralel** | N track sekaligus dengan `--jobs` (default 2, maksimum 8), lebih cepat untuk playlist besar |
+| **Lewat bot check** | `--cookies-from-browser` memberika sesi browser kamu ke yt-dlp untuk bot check YouTube yang paling ketat |
+| **Integritas terverifikasi** | Setelah unduh, setiap file diverifikasi dengan ffprobe; file rusak dihapus dan dilaporkan, durasi yang mencurigakan ditandai di output |
+| **Playlist file** | `--m3u` membuat Extended M3U playlist dari file yang diunduh di sampingnya |
 | **Dry run** | `--dry-run` mencetak source yang dipilih per track tanpa mengunduh apa pun |
 
 ### Metadata
@@ -90,6 +93,7 @@
 |------------|-----------------|-------|
 | **Python** | 3.10 | Wajib |
 | **FFmpeg** | 6 | Wajib untuk konversi audio |
+| **ffprobe** | termasuk di FFmpeg | Wajib untuk verifikasi integritas setelah unduh |
 
 > [!TIP]
 > Tidak butuh akun Spotify. Hanya konten publik (track, album, artist dan playlist publik) yang bisa di-resolve; playlist privat tidak bisa diakses tanpa entitlement resmi.
@@ -225,6 +229,9 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 - Unduh hingga 8 track sekaligus dengan `--jobs 4` (default 2)
 - Abaikan cover art atau lirik dengan `--no-cover` / `--no-lyrics`, atau ulangi semua dengan `--overwrite`
 - Periksa seluruh stack dengan `stashify doctor` saat unduhan gagal; melaporkan Python, FFmpeg, akses jaringan ke Spotify, YouTube dan lyrics API
+- Berikan cookie browser untuk melewati bot check YouTube dengan `--cookies-from-browser chrome` (atau `firefox`, `edge`, `brave`, `chromium`)
+- Lewati verifikasi integritas ffprobe dengan `--no-verify` jika ffprobe tidak tersedia
+- Buat Extended M3U playlist dari yang diunduh dengan `--m3u`
 - Preview hasil match tanpa mengunduh dengan `--dry-run`
 - Sinkronkan folder dengan playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
 - Retag file yang sudah kamu punya: `stashify meta file1.mp3 file2.mp3 --url "ALBUM_URL"`
@@ -252,6 +259,7 @@ Lokasi config file: `%APPDATA%\stashify\config.json` (Windows), `~/.config/stash
 | `provider` | string | `embed` | `embed` (default, tanpa akun) atau `api` (Web API resmi, butuh developer app bereputasi Premium) |
 | `detailed` | boolean | `true` | Ambil detail per track (artists, cover, tahun rilis) untuk playlist |
 | `overwrite` | boolean | `false` | Unduh ulang file yang sudah ada |
+| `verify` | boolean | `true` | Verifikasi integritas file yang diunduh dengan ffprobe; file rusak akan dihapus |
 | `no_cover` | boolean | `false` | Jangan pernah menyematkan cover art |
 | `no_lyrics` | boolean | `false` | Jangan pernah menyematkan lirik |
 
@@ -269,11 +277,11 @@ Stashify hanya online saat me-resolve metadata, mencari source, atau mengambil l
 |---------|--------|
 | Metadata track, album, playlist dan artist | Public embed pages Spotify (default) atau Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (disematkan ke file) |
-| Audio source | YouTube, lewat yt-dlp |
+| Audio source | YouTube, lewat yt-dlp; SoundCloud sebagai fallback saat YouTube tidak memberikan apa pun yang layak |
 | Lirik | lrclib.net (tanpa key), lyrics.ovh sebagai fallback |
 
 > [!NOTE]
-> Beberapa track tidak punya match yang layak di YouTube. Stashify melaporkan kandidat terbaik yang ditemukan dan melewati track dengan skor terlalu rendah daripada mengunduh lagu yang salah.
+> Beberapa track tidak punya match yang layak di YouTube. Stashify mencoba SoundCloud sebagai fallback, lalu melaporkan kandidat terbaik yang ditemukan dan melewati track dengan skor terlalu rendah daripada mengunduh lagu yang salah.
 
 ---
 

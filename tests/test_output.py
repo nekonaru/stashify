@@ -1,5 +1,6 @@
+
 from stashify.models import Track
-from stashify.output import release_year, render_template, safe_segment
+from stashify.output import release_year, render_template, safe_segment, write_m3u
 from stashify.sources import score_candidate
 
 
@@ -33,6 +34,35 @@ def test_render_template_empty_falls_back():
 def test_render_template_uses_unknown_tokens_as_empty():
     track = make_track()
     assert render_template("{bogus} {title}", track) == "Song"
+
+
+def test_write_m3u_relative_paths(tmp_path):
+    out_dir = tmp_path / "music"
+    out_dir.mkdir()
+    def make(name, duration, artist="Artist"):
+        path = out_dir / "sub" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x")
+        return Track(
+            title=name[:-4],
+            artists=[artist],
+            duration_ms=duration,
+            spotify_url=f"https://open.spotify.com/track/{name[:8].ljust(22, 'a')}",
+        ), path
+
+    t1, p1 = make("first.mp3", 185000, "A")
+    t2, p2 = make("second.mp3", 240000, "B")
+    m3u = write_m3u([(t1, p1), (t2, p2)], out_dir)
+
+    content = m3u.read_text(encoding="utf-8")
+    assert "#EXTM3U" in content
+    assert "#EXTINF:185" in content
+    assert "#EXTINF:240" in content
+    assert "A - first" in content
+    assert "B - second" in content
+    assert "sub/first.mp3" in content
+    assert "sub/second.mp3" in content
+    assert m3u.name == "stashify.m3u"
 
 
 def test_release_year():

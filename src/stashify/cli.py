@@ -25,6 +25,7 @@ from .embed import EmbedResolver
 from .errors import StashifyError
 from .lyrics import fetch_lyrics
 from .models import Track
+from .output import write_m3u
 from .pipeline import TrackOptions, process_tracks, summarize
 from .sources import find_source
 from .spotify import SpotifyClient, client_credentials_from_env
@@ -65,6 +66,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-details", action="store_true", default=None,
         help="skip per-track detail lookup (faster, fewer cover art files)",
     )
+    resolver.add_argument(
+        "--cookies-from-browser", default=None,
+        choices=["chrome", "chromium", "edge", "firefox", "brave"],
+        metavar="BROWSER",
+        help="browser whose cookies bypass YouTube checks (e.g. chrome, firefox)",
+    )
 
     output = argparse.ArgumentParser(add_help=False, parents=[resolver])
     output.add_argument(
@@ -102,6 +109,14 @@ def build_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--jobs", type=int, default=None, metavar="N",
         help=f"download up to N tracks in parallel (default: {DEFAULT_JOBS}, max 8)",
+    )
+    output.add_argument(
+        "--verify", dest="verify", default=None, action=argparse.BooleanOptionalAction,
+        help="ffprobe-verify downloaded files (default: on)",
+    )
+    output.add_argument(
+        "--m3u", action="store_true", default=None,
+        help="write an Extended M3U playlist of downloaded files",
     )
 
     sub = parser.add_subparsers(dest="command", metavar="command", required=True)
@@ -221,6 +236,8 @@ def _options(args: argparse.Namespace) -> TrackOptions:
         embed_cover=cover,
         embed_lyrics=lyrics,
         jobs=clamp_jobs(pick(getattr(args, "jobs", None), "jobs", DEFAULT_JOBS)),
+        verify=_pick_flag(getattr(args, "verify", None), config.get("verify"), default=True),
+        cookies_from_browser=getattr(args, "cookies_from_browser", None),
     )
 
 
@@ -241,6 +258,11 @@ def _cmd_download(args: argparse.Namespace) -> int:
     print(f"Saving to: {options.out_dir}")
     results = process_tracks(tracks, options)
     counts = summarize(results)
+    if getattr(args, "m3u", None):
+        entries = [(r.track, r.path) for r in results if r.status == "downloaded" and r.path]
+        if entries:
+            m3u_path = write_m3u(entries, options.out_dir)
+            print(f"Wrote playlist: {m3u_path}")
     print(
         f"Done: {counts['downloaded']} downloaded, {counts['skipped']} skipped, "
         f"{counts['failed']} failed."
@@ -269,7 +291,9 @@ def _cmd_url(args: argparse.Namespace) -> int:
 
     def work(index: int, track: Track) -> tuple[int, str, bool]:
         try:
-            source = find_source(track)
+            source = find_source(
+                track, cookies_from_browser=getattr(args, "cookies_from_browser", None)
+            )
         except StashifyError as exc:
             return index, f"{track.display()} - not found: {exc}", False
         return index, f"{track.display()} - {source.url}", True
@@ -352,6 +376,22 @@ def _cmd_sync(args: argparse.Namespace) -> int:
 
     removed_keys = {e.get("key") for e in removed}
     state["entries"] = [e for e in state["entries"] if e.get("key") not in removed_keys]
+
+    if getattr(args, "m3u", None):
+        entries = []
+        for entry in state["entries"]:
+            relative = Path(entry.get("path") or "")
+            target = out_dir / relative
+            if target.is_file():
+                stub = Track(
+                    title=entry.get("title") or "Unknown",
+                    artists=[entry.get("artist") or "Unknown Artist"],
+                )
+                entries.append((stub, target))
+        if entries:
+            m3u_path = write_m3u(entries, out_dir)
+            print(f"Wrote playlist: {m3u_path}")
+
     save_state(state_path, state)
 
     counts_failed = 0
@@ -365,6 +405,12 @@ def _cmd_sync(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        # cp1252 consoles garble non-Latin titles; prefer UTF-8 with replacement.
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     parser = build_parser()
     args = parser.parse_args(argv)
     logging.basicConfig(

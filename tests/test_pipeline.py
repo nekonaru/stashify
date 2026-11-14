@@ -3,7 +3,7 @@ from stashify.pipeline import TrackOptions, process_tracks, summarize
 from stashify.sources import Source
 
 
-def fake_source(track):
+def fake_source(track, cookies_from_browser=None):
     return Source(
         url=f"https://www.youtube.com/watch?v={abs(hash(track.title)) % (10**8)}",
         title=f"{track.title} (Official Audio)",
@@ -12,7 +12,7 @@ def fake_source(track):
 
 
 def _patch_network(monkeypatch, tmp_path):
-    def fake_download(source, output_base, audio_format, bitrate):
+    def fake_download(source, output_base, audio_format, bitrate, cookies_from_browser=None):
         path = output_base.with_suffix("." + audio_format)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"audio")
@@ -22,6 +22,9 @@ def _patch_network(monkeypatch, tmp_path):
     monkeypatch.setattr("stashify.pipeline.download_audio", fake_download)
     monkeypatch.setattr("stashify.pipeline.fetch_lyrics", lambda track: None)
     monkeypatch.setattr("stashify.pipeline.tag_file", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "stashify.pipeline.verify_media", lambda path, track: (True, "verified (1s)")
+    )
 
 
 def test_sequential_pipeline(tmp_path, monkeypatch):
@@ -58,6 +61,27 @@ def test_parallel_pipeline_returns_order(tmp_path, monkeypatch):
     assert [r.track.title for r in results] == [f"Song {i}" for i in range(6)]
     assert all(r.status == "downloaded" for r in results)
     assert len(list(tmp_path.glob("*.mp3"))) == 6
+
+
+def test_pipeline_deletes_corrupt_file_on_verify_failure(tmp_path, monkeypatch):
+    _patch_network(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        "stashify.pipeline.verify_media", lambda path, track: (False, "corrupt")
+    )
+    tracks = [Track(title="Song", artists=["Artist"])]
+    options = TrackOptions(
+        out_dir=tmp_path,
+        template="{title}",
+        audio_format="mp3",
+        bitrate="192k",
+        jobs=1,
+        embed_cover=False,
+        embed_lyrics=False,
+    )
+    results = process_tracks(tracks, options, progress=lambda m: None)
+    assert results[0].status == "failed"
+    assert "verification failed" in results[0].detail
+    assert list(tmp_path.glob("*.mp3")) == []
 
 
 def test_parallel_pipeline_no_clobber(tmp_path, monkeypatch):
