@@ -92,7 +92,9 @@ def test_url_output_order_preserved(monkeypatch, capsys):
     monkeypatch.setattr("stashify.cli._fetch", lambda args, urls: tracks)
     monkeypatch.setattr(
         "stashify.cli.find_source",
-        lambda track: Source(url=f"https://youtu.be/id{track.title[-1]}", title=track.title),
+        lambda track, **kwargs: Source(
+            url=f"https://youtu.be/id{track.title[-1]}", title=track.title
+        ),
     )
     code = main(["url", "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"])
     captured = capsys.readouterr().out
@@ -108,7 +110,7 @@ def test_url_failure_exit_code(monkeypatch, capsys):
     tracks = [Track(title="Song", artists=["Artist"])]
     monkeypatch.setattr("stashify.cli._fetch", lambda args, urls: tracks)
 
-    def boom(track):
+    def boom(track, **kwargs):
         raise StashifyError("no results")
 
     monkeypatch.setattr("stashify.cli.find_source", boom)

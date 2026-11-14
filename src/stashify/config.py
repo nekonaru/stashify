@@ -30,6 +30,7 @@ _KNOWN_KEYS = {
     "provider": str,
     "detailed": bool,
     "jobs": int,
+    "verify": bool,
 }
 
 
