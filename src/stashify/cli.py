@@ -405,6 +405,12 @@ def _cmd_sync(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        # cp1252 consoles garble non-Latin titles; prefer UTF-8 with replacement.
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     parser = build_parser()
     args = parser.parse_args(argv)
     logging.basicConfig(

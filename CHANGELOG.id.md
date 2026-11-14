@@ -2,6 +2,29 @@
 
 Semua perubahan penting di Stashify didokumentasikan di file ini. Formatnya mengikuti [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), dan project ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.5.0
+
+Unduhan diverifikasi setelah selesai, SoundCloud menjadi backup YouTube, dan unduhan bisa langsung masuk ke file playlist.
+
+### Fitur baru
+
+- **Fallback ke SoundCloud.** Saat YouTube tidak memberikan apa pun yang layak (diblokir, age-restricted, geo-locked), SoundCloud dicoba berikutnya dengan batas selisih durasi 15 detik yang ketat, sehingga preview 30 detik tidak pernah tersimpan sebagai track.
+- **Verifikasi integritas ffprobe.** Setiap file yang diunduh diperiksa sebelum ditag; file rusak dihapus dan dilaporkan di akhir, durasi mencurigakan (misalnya loop 10 jam yang tercocok sebagai lagu) ditandai pada baris output. Nonaktifkan dengan `--no-verify`.
+- **Output playlist `--m3u`.** Menulis Extended M3U playlist (`stashify.m3u` di folder output) dari file yang diunduh dengan path relatif, siap dipakai VLC, foobar2000 atau sejenisnya.
+- **`--cookies-from-browser`.** Berikan `chrome`, `chromium`, `edge`, `firefox` atau `brave` ke yt-dlp saat YouTube mewajibkan sesi browser.
+
+### Perbaikan bug
+
+- **Encoding output console.** Stdout dan stderr dialihkan ke UTF-8 (dengan replacement) agar judul non-Latin tercetak, bukan crash di console cp1252.
+- **Matcher terlalu longgar.** Kandidat YouTube dengan selisih durasi lebih dari 120 detik sekarang ditolak dan beralih ke fallback SoundCloud, bukan disimpan apa adanya.
+
+### Penggunaan
+
+```bash
+pip install --upgrade stashify-cli
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID" --m3u
+```
+
 ## v1.4.0
 
 Stashify sekarang punya health check bawaan, dry run lebih cepat, dan lirik yang lebih andal.

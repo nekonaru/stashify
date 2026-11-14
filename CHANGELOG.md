@@ -2,6 +2,29 @@
 
 All notable changes to Stashify are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.5.0
+
+Downloads are verified after the fact, SoundCloud backs up YouTube, and downloads can drop straight into a playlist file.
+
+### New features
+
+- **SoundCloud fallback.** When YouTube yields nothing acceptable (blocked, age-restricted, geo-locked), SoundCloud is tried next with a strict 15-second duration cap so 30-second previews are never saved as tracks.
+- **ffprobe integrity verification.** Every downloaded file is probed before tagging; corrupt files are deleted and reported at the end, suspicious durations (for example a 10-hour loop mis-matched as the song) are flagged in the line output. Disable with `--no-verify`.
+- **`--m3u` playlist output.** Writes an Extended M3U playlist (`stashify.m3u` in the output folder) of the downloaded files with relative paths, ready for VLC, foobar2000 or similar.
+- **`--cookies-from-browser`.** Pass `chrome`, `chromium`, `edge`, `firefox` or `brave` to yt-dlp when YouTube requires a browser session.
+
+### Bug fixes
+
+- **Console output encoding.** Stdout and stderr are switched to UTF-8 (with replacement) so non-Latin titles print instead of crashing a cp1252 console.
+- **Overly permissive matcher.** YouTube candidates with duration off by more than 120 seconds are now rejected in favor of the SoundCloud fallback, instead of being saved as-is.
+
+### Usage
+
+```bash
+pip install --upgrade stashify-cli
+stashify download "https://open.spotify.com/playlist/PLAYLIST_ID" --m3u
+```
+
 ## v1.4.0
 
 Stashify gets a built-in health check, faster dry runs and more reliable lyrics.

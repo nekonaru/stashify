@@ -57,11 +57,14 @@
 |---------|-------------|
 | **Track, album, playlist, artist** | Public Spotify links resolve to a track list and every track downloads (artist links fetch the artist's top 10 tracks, public playlists show up to 50 tracks) |
 | **No account needed** | Metadata comes from Spotify's public embed pages, nothing to create or configure |
-| **Best-match source** | YouTube results are scored on duration and word overlap, the strongest match wins |
+| **Best-match source** | YouTube matches are scored on duration and word overlap, with a SoundCloud fallback when YouTube yields nothing usable |
 | **Audio formats** | MP3, M4A, Opus, FLAC or WAV, converted through FFmpeg |
 | **Bitrate control** | Choose the bitrate for lossy formats, default `192k` |
 | **Skip existing** | Files that already exist are skipped, `--overwrite` forces a re-download |
 | **Parallel downloads** | N tracks at a time with `--jobs` (default 2, max 8), faster on large playlists |
+| **Works behind bot checks** | `--cookies-from-browser` passes your browser session to yt-dlp for the strictest YouTube checks |
+| **Integrity verified** | After download, every file is ffprobe-verified; corrupt files are removed and reported, suspicious durations are flagged in the output |
+| **Playlist file** | `--m3u` writes an Extended M3U playlist of the downloaded files next to them |
 | **Dry run** | `--dry-run` prints the matched source per track without downloading anything |
 
 ### Metadata
@@ -90,6 +93,7 @@
 |------------|-----------------|-------|
 | **Python** | 3.10 | Required |
 | **FFmpeg** | 6 | Required for audio conversion |
+| **ffprobe** | bundled with FFmpeg | Required for the post-download integrity check |
 
 > [!TIP]
 > No Spotify account is required. Only public content (tracks, albums, artists and public playlists) can be resolved; private playlists are not reachable without an official API entitlement.
@@ -224,6 +228,9 @@ stashify download "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
 - Change the output folder with `-o "D:\Music"` and the naming scheme with `-t "{album}/{track_number} {title}"`
 - Download up to 8 tracks at once with `--jobs 4` (default 2)
 - Skip cover art or lyrics with `--no-cover` / `--no-lyrics`, or re-fetch everything with `--overwrite`
+- Pass browser cookies to bypass YouTube bot checks with `--cookies-from-browser chrome` (or `firefox`, `edge`, `brave`, `chromium`)
+- Skip the ffprobe integrity check with `--no-verify` if ffprobe is unavailable
+- Write an Extended M3U playlist of what was downloaded with `--m3u`
 - Check the whole stack with `stashify doctor` when a download fails; it reports Python, FFmpeg, network access to Spotify, YouTube and the lyrics API
 - Preview the match without downloading with `--dry-run`
 - Keep a folder in sync with a playlist: `stashify sync "PLAYLIST_URL" -o "D:\Music\MyList"`
@@ -252,6 +259,7 @@ Config file locations: `%APPDATA%\stashify\config.json` (Windows), `~/.config/st
 | `provider` | string | `embed` | `embed` (default, no account) or `api` (official Web API, needs a Premium-entitled developer app) |
 | `detailed` | boolean | `true` | Fetch per-track details (artists, cover, release year) for playlists |
 | `overwrite` | boolean | `false` | Re-download files that already exist |
+| `verify` | boolean | `true` | ffprobe-verify downloaded files; corrupt files are removed |
 | `no_cover` | boolean | `false` | Never embed cover art |
 | `no_lyrics` | boolean | `false` | Never embed lyrics |
 
@@ -269,11 +277,11 @@ Stashify is online only when it resolves metadata, searches for a source or fetc
 |---------|--------|
 | Track, album, playlist and artist metadata | Spotify's public embed pages (default) or the Spotify Web API (`--provider api`) |
 | Cover art | Spotify image CDN (embedded into files) |
-| Audio source | YouTube, through yt-dlp |
+| Audio source | YouTube, through yt-dlp; SoundCloud as a fallback when YouTube yields nothing usable |
 | Lyrics | lrclib.net (no key required), lyrics.ovh as fallback |
 
 > [!NOTE]
-> Some tracks have no usable match on YouTube. Stashify reports the best candidate it found and skips tracks whose score is too low instead of downloading the wrong song.
+> Some tracks have no usable match on YouTube. Stashify tries SoundCloud as a fallback, then reports the best candidate it found and skips tracks whose score is too low instead of downloading the wrong song.
 
 ---
 
