@@ -17,6 +17,7 @@ Downloads are verified after the fact, SoundCloud backs up YouTube, and download
 
 - **Console output encoding.** Stdout and stderr are switched to UTF-8 (with replacement) so non-Latin titles print instead of crashing a cp1252 console.
 - **Overly permissive matcher.** YouTube candidates with duration off by more than 120 seconds are now rejected in favor of the SoundCloud fallback, instead of being saved as-is.
+- **Verifier failures no longer delete files.** If ffprobe is missing or times out, the download is kept and reported as "could not verify"; only confirmed-corrupt files are deleted and reported as failed.
 
 ### Usage
 

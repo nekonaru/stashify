@@ -42,9 +42,9 @@ def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
-def _ffprobe_duration(path: Path) -> float:
+def _ffprobe_duration(path: Path, ffprobe: str | None = None) -> float:
     """Run ffprobe and return the stream duration in seconds."""
-    ffprobe = shutil.which("ffprobe")
+    ffprobe = ffprobe or shutil.which("ffprobe")
     if ffprobe is None:
         raise DownloadError(
             "ffprobe was not found on PATH. Install FFmpeg first: "
@@ -87,17 +87,27 @@ def verify_media(
 ) -> tuple[bool, str]:
     """Verify a downloaded audio file is readable and roughly the right length.
 
-    Returns (ok, detail). ``ok`` is False when the file is corrupt or unreadable.
-    ``detail`` carries a human-readable summary, including warnings for
-    suspiciously long or short durations (which does not delete the file).
+    Returns (ok, detail). ``ok`` is False only when the file is confirmed
+    corrupt or missing (caller should delete it and report the track as
+    failed). Environment problems (ffprobe unavailable, timed out) never delete
+    the file; they produce (True, "could not verify ...") so working downloads
+    are kept. ``detail`` carries a human-readable summary.
     """
-    if not Path(path).is_file():
+    file_path = Path(path)
+    if not file_path.is_file():
         return False, "file is missing"
-    if Path(path).stat().st_size == 0:
+    if file_path.stat().st_size == 0:
         return False, "file is empty"
+    ffprobe = shutil.which("ffprobe")
+    if ffprobe is None:
+        return True, "could not verify (ffprobe not found on PATH)"
     try:
-        duration = _ffprobe_duration(Path(path))
+        duration = _ffprobe_duration(file_path, ffprobe)
     except DownloadError as exc:
+        text = str(exc).lower()
+        # Infrastructure failures keep the file; unreadable files are corrupt.
+        if "ffprobe was not found" in text or "ffprobe timed out" in text:
+            return True, f"could not verify ({exc})"
         return False, str(exc)
     if track is not None and track.duration_ms > 0:
         expected = track.duration_ms / 1000.0

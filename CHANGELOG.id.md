@@ -17,6 +17,7 @@ Unduhan diverifikasi setelah selesai, SoundCloud menjadi backup YouTube, dan und
 
 - **Encoding output console.** Stdout dan stderr dialihkan ke UTF-8 (dengan replacement) agar judul non-Latin tercetak, bukan crash di console cp1252.
 - **Matcher terlalu longgar.** Kandidat YouTube dengan selisih durasi lebih dari 120 detik sekarang ditolak dan beralih ke fallback SoundCloud, bukan disimpan apa adanya.
+- **Verifikasi yang gagal tidak menghapus file.** Jika ffprobe tidak ada atau timeout, unduhan tetap disimpan dan dilaporkan sebagai "could not verify"; hanya file yang benar-benar corrupt yang dihapus dan dilaporkan sebagai gagal.
 
 ### Penggunaan
 

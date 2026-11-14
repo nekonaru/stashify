@@ -11,6 +11,7 @@ seconds long; a preview must never be saved as the track.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 
@@ -78,14 +79,12 @@ _YT_OPTIONS = {
     "no_warnings": True,
     "skip_download": True,
     "extract_flat": True,
-    "default_search": "ytsearch",
 }
 _SC_OPTIONS = {
     "quiet": True,
     "no_warnings": True,
     "skip_download": True,
     "extract_flat": True,
-    "default_search": "scsearch",
 }
 
 
@@ -94,6 +93,7 @@ def _entries_for(
     query: str,
     options: dict,
     cookies_from_browser: str | None,
+    search_count: int,
 ) -> list[dict]:
     call_options = dict(options)
     call_options["default_search"] = prefix
@@ -101,7 +101,7 @@ def _entries_for(
         call_options["cookiesfrombrowser"] = (cookies_from_browser,)
     try:
         with yt_dlp.YoutubeDL(call_options) as ydl:
-            result = ydl.extract_info(f"{prefix}{SEARCH_COUNT}:{query}", download=False)
+            result = ydl.extract_info(f"{prefix}{search_count}:{query}", download=False)
     except Exception as exc:  # yt-dlp raises many error types; surface one clear message.
         from .errors import SourceNotFoundError
 
@@ -109,12 +109,16 @@ def _entries_for(
     return (result or {}).get("entries") or []
 
 
-def _youtube_entries(query: str, cookies_from_browser: str | None) -> list[dict]:
-    return _entries_for("ytsearch", query, _YT_OPTIONS, cookies_from_browser)
+def _youtube_entries(
+    query: str, cookies_from_browser: str | None, search_count: int
+) -> list[dict]:
+    return _entries_for("ytsearch", query, _YT_OPTIONS, cookies_from_browser, search_count)
 
 
-def _soundcloud_entries(query: str, cookies_from_browser: str | None) -> list[dict]:
-    return _entries_for("scsearch", query, _SC_OPTIONS, cookies_from_browser)
+def _soundcloud_entries(
+    query: str, cookies_from_browser: str | None, search_count: int
+) -> list[dict]:
+    return _entries_for("scsearch", query, _SC_OPTIONS, cookies_from_browser, search_count)
 
 
 def _pick_best(track: Track, entries: list[dict], provider: str) -> Source | None:
@@ -131,7 +135,10 @@ def _pick_best(track: Track, entries: list[dict], provider: str) -> Source | Non
             else:
                 url = f"https://www.youtube.com/watch?v={url}"
         duration = entry.get("duration")
-        duration_seconds = float(duration) if duration is not None else None
+        try:
+            duration_seconds = float(duration) if duration is not None else None
+        except (TypeError, ValueError):
+            duration_seconds = None
         candidate = Source(
             url=str(url),
             title=entry.get("title") or "",
@@ -160,8 +167,10 @@ def _acceptable_soundcloud(best: Source | None, track: Track) -> Source | None:
     if best is None or best.score < MIN_ACCEPT_SCORE:
         return None
     if best.duration_seconds is None:
-        # Without a duration we cannot reject 30-second previews.
-        return None
+        # Without a duration we cannot compare; reject obvious previews by name.
+        if "preview" in (best.title or "").lower():
+            return None
+        return best
     if track.duration_ms > 0:
         expected = track.duration_ms / 1000.0
         if abs(best.duration_seconds - expected) > SOUNDCLOUD_MAX_DURATION_DIFF:
@@ -170,26 +179,32 @@ def _acceptable_soundcloud(best: Source | None, track: Track) -> Source | None:
     return best
 
 
+LOG = logging.getLogger(__name__)
+
+
 def find_source(
     track: Track,
     search_count: int = SEARCH_COUNT,
     cookies_from_browser: str | None = None,
 ) -> Source:
     query = track.search_query()
+    youtube_error: str | None = None
 
     try:
-        youtube_entries = _youtube_entries(query, cookies_from_browser)
+        youtube_entries = _youtube_entries(query, cookies_from_browser, search_count)
         if not youtube_entries:
             # YouTube sometimes returns nothing for the plain "artist - title" query.
             youtube_entries = _youtube_entries(
-                f"{track.artists_text} {track.title}", cookies_from_browser
+                f"{track.artists_text} {track.title}", cookies_from_browser, search_count
             )
         if not youtube_entries:
             youtube_entries = _youtube_entries(
-                f"{track.artists_text} {track.title} audio", cookies_from_browser
+                f"{track.artists_text} {track.title} audio", cookies_from_browser, search_count
             )
-    except Exception:
-        youtube_entries = []  # YouTube blocked/unavailable; try SoundCloud instead.
+    except Exception as exc:  # yt-dlp errors, cookie issues, extractor bugs.
+        LOG.debug("YouTube search failed: %s", exc)
+        youtube_error = str(exc)
+        youtube_entries = []  # Try SoundCloud instead.
 
     best = _pick_best(track, youtube_entries, "youtube")
     accepted = _acceptable_youtube(best, track)
@@ -197,10 +212,10 @@ def find_source(
         return accepted
 
     # Fallback: SoundCloud. Used only when YouTube yields nothing acceptable.
-    soundcloud_entries = _soundcloud_entries(query, cookies_from_browser)
+    soundcloud_entries = _soundcloud_entries(query, cookies_from_browser, search_count)
     if not soundcloud_entries:
         soundcloud_entries = _soundcloud_entries(
-            f"{track.artists_text} {track.title} audio", cookies_from_browser
+            f"{track.artists_text} {track.title} audio", cookies_from_browser, search_count
         )
     fallback = _pick_best(track, soundcloud_entries, "soundcloud")
     accepted = _acceptable_soundcloud(fallback, track)
@@ -209,17 +224,18 @@ def find_source(
 
     from .errors import SourceNotFoundError
 
+    note = f" (YouTube: {youtube_error})" if youtube_error else ""
     if best is None:
         if fallback is None:
             raise SourceNotFoundError(
-                f"No results from YouTube or SoundCloud for {track.display()!r}."
+                f"No results from YouTube or SoundCloud for {track.display()!r}.{note}"
             )
         raise SourceNotFoundError(
             f"Only SoundCloud previews found for {track.display()!r} "
-            f"(best score {fallback.score:.0f}, duration {fallback.duration_seconds or 0:.0f}s)."
+            f"(score {fallback.score:.0f}, duration {fallback.duration_seconds or 0:.0f}s).{note}"
         )
     raise SourceNotFoundError(
         f"Best YouTube match for {track.display()!r} looks unreliable "
         f"(score {best.score:.0f}). SoundCloud offers no better candidate. "
-        "Try the full URL instead."
+        f"Try the full URL instead.{note}"
     )

@@ -32,7 +32,8 @@ def write_m3u(entries, out_dir: Path, name: str = "stashify.m3u") -> Path:
     lines = ["#EXTM3U"]
     for track, path in entries:
         duration = int(track.duration_ms // 1000) if track.duration_ms else -1
-        lines.append(f"#EXTINF:{duration},{track.artists_text} - {track.title}")
+        label = f"{track.artists_text} - {track.title}".replace("\n", " ").replace("\r", " ")
+        lines.append(f"#EXTINF:{duration},{label}")
         try:
             rel = Path(path).resolve().relative_to(out_dir.resolve())
             lines.append(rel.as_posix())

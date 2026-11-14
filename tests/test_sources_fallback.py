@@ -1,4 +1,4 @@
-"""SoundCloud fallback behavior tests for the source matcher."""
+﻿"""SoundCloud fallback behavior tests for the source matcher."""
 
 import pytest
 
@@ -37,11 +37,11 @@ class FakeSearch:
 
 
 def test_soundcloud_used_when_youtube_empty(monkeypatch):
-    monkeypatch.setattr(sources, "_youtube_entries", lambda q, c=None: [])
+    monkeypatch.setattr(sources, "_youtube_entries", lambda q, c=None, n=None: [])
     monkeypatch.setattr(
         sources,
         "_soundcloud_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "sc1",
                 "url": "https://soundcloud.com/user/track",
@@ -57,11 +57,11 @@ def test_soundcloud_used_when_youtube_empty(monkeypatch):
 
 
 def test_soundcloud_30s_preview_rejected(monkeypatch):
-    monkeypatch.setattr(sources, "_youtube_entries", lambda q, c=None: [])
+    monkeypatch.setattr(sources, "_youtube_entries", lambda q, c=None, n=None: [])
     monkeypatch.setattr(
         sources,
         "_soundcloud_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "sc1",
                 "url": "https://soundcloud.com/user/track",
@@ -79,7 +79,7 @@ def test_youtube_allowed_with_slow_result(monkeypatch):
     monkeypatch.setattr(
         sources,
         "_youtube_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "v1",
                 "url": "https://www.youtube.com/watch?v=v1",
@@ -93,7 +93,9 @@ def test_youtube_allowed_with_slow_result(monkeypatch):
     monkeypatch.setattr(
         sources,
         "_soundcloud_entries",
-        lambda q, c=None: (_ for _ in ()).throw(AssertionError("should not search SoundCloud")),
+        lambda q, c=None, n=None: (
+            (_ for _ in ()).throw(AssertionError("should not search SoundCloud"))
+        ),
     )
     source = find_source(make_track())
     assert source.provider == "youtube"
@@ -104,7 +106,7 @@ def test_low_score_youtube_falls_back_to_soundcloud(monkeypatch):
     monkeypatch.setattr(
         sources,
         "_youtube_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "v1",
                 "url": "https://www.youtube.com/watch?v=v1",
@@ -117,7 +119,7 @@ def test_low_score_youtube_falls_back_to_soundcloud(monkeypatch):
     monkeypatch.setattr(
         sources,
         "_soundcloud_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "sc1",
                 "url": "https://soundcloud.com/user/track",
@@ -142,7 +144,7 @@ def test_youtube_search_failure_falls_back(monkeypatch):
     monkeypatch.setattr(
         sources,
         "_soundcloud_entries",
-        lambda q, c=None: [
+        lambda q, c=None, n=None: [
             {
                 "id": "sc1",
                 "url": "https://soundcloud.com/user/track",
